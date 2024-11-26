@@ -2,9 +2,11 @@ hub:
   config:
     Authenticator:
       admin_users:
-        - admin1
+        - admin
       allowed_users:
         - user1
+        - ec2-user
+        - ianleely
     # testing only - do not do this for production
     DummyAuthenticator:
       password: never-do-this
@@ -26,7 +28,7 @@ singleuser:
   cmd: null
   startTimeout: 600
   memory:
-    guarantee: 24G
+    guarantee: 8G
   extraResource:
     limits:
       nvidia.com/gpu: "1"
@@ -37,7 +39,7 @@ singleuser:
           name: hf-token
           key: token
   storage:
-    capacity: 100Gi
+    capacity: 25Gi
     extraVolumes:
       - name: shm-volume
         emptyDir:

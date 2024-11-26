@@ -125,10 +125,10 @@ module "eks" {
 
       ami_type     = "AL2_x86_64_GPU"
       min_size     = 0
-      max_size     = 1
-      desired_size = 0
+      max_size     = 4
+      desired_size = 2
 
-      instance_types = ["g5.12xlarge"]
+      instance_types = ["g4dn.2xlarge"]
 
       labels = {
         WorkerType    = "ON_DEMAND"
