@@ -553,3 +553,8 @@ module "efs_config" {
 
   depends_on = [kubernetes_namespace_v1.jupyterhub]
 }
+
+#---------------------------------------
+# Ray Cluster Configuration
+#---------------------------------------
+
