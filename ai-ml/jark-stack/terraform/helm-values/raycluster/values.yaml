@@ -1,0 +1,93 @@
+#namespace: fsi-ray
+#createNamespace: false
+rayCluster:
+  metadata:
+    name: fsi-ray
+  spec:
+    rayVersion: '2.6.0'
+    headGroupSpec:
+      rayStartParams:
+        dashboardHost: '0.0.0.0'
+      template:
+        spec:
+          affinity:
+            nodeAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  preference:
+                    matchExpressions:
+                      - key: NodeGroupType
+                        operator: In
+                        values: [ "core" ]
+                - weight: 90
+                  preference:
+                    matchExpressions:
+                      - key: NodeGroupType
+                        operator: In
+                        values: [ "gpu" ]
+          tolerations:
+            - key: nvidia.com/gpu
+              operator: Exists
+              effect: NoSchedule
+          containers:
+            rayHead:
+              image: rayproject/ray-ml:2.6.0
+              resources:
+                limits:
+                  cpu: 1
+                  memory: 8Gi
+                  nvidiaGpu: 1
+                requests:
+                  cpu: 1
+                  memory: 8Gi
+                  nvidiaGpu: 1
+              ports:
+                - containerPort: 6379
+                  name: gcs-server
+                - containerPort: 8265
+                  name: dashboard
+                - containerPort: 10001
+                  name: client
+    workerGroupSpecs:
+      replicas: 1
+      minReplicas: 1
+      maxReplicas: 5
+      rayStartParams: {}  # 添加这一行
+      groupName: gpu-group
+      template:
+        spec:
+          affinity:
+            nodeAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  preference:
+                    matchExpressions:
+                      - key: NodeGroupType
+                        operator: In
+                        values: [ "core" ]
+                - weight: 90
+                  preference:
+                    matchExpressions:
+                      - key: NodeGroupType
+                        operator: In
+                        values: [ "gpu" ]
+          tolerations:
+            - key: nvidia.com/gpu
+              operator: Exists
+              effect: NoSchedule
+          containers:
+            rayWorker:
+              image: rayproject/ray-ml:2.6.0
+              lifecycle:
+                preStop:
+                  exec:
+                    command: ["/bin/sh","-c","ray stop"]
+              resources:
+                limits:
+                  cpu: "1"
+                  memory: "8Gi"
+                  nvidiaGpu: 1
+                requests:
+                  cpu: "1"
+                  memory: "8Gi"
+                  nvidiaGpu: 1

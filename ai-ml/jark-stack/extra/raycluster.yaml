@@ -1,0 +1,116 @@
+namespace: fsi-ray
+rayCluster:
+  metadata:
+    name: fsi-ray
+  spec:
+    rayVersion: '2.6.0'
+    headGroupSpec:
+      rayStartParams:
+        dashboard-host: '0.0.0.0'
+      template:
+        spec:
+          affinity:
+            nodeAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+                # 优先调度到 core_node_group
+                - weight: 100
+                  preference:
+                    matchExpressions:
+                      - key: NodeGroupType
+                        operator: In
+                        values: [ "core" ]
+                # 优先调度到 gpu1 节点组
+                - weight: 90
+                  preference:
+                    matchExpressions:
+                      - key: NodeGroupType
+                        operator: In
+                        values: [ "gpu" ]
+#          nodeSelector:
+#            type: karpenter
+#            NodeGroupType: ray-gpu-nodepool
+          tolerations:
+            - key: nvidia.com/gpu
+              operator: Exists
+              effect: NoSchedule
+          containers:
+            - name: ray-head
+              image: rayproject/ray-ml:2.6.0
+              resources:
+                limits:
+                  cpu: 1
+                  memory: 8Gi
+                  nvidia.com/gpu: 1
+                requests:
+                  cpu: 1
+                  memory: 8Gi
+                  nvidia.com/gpu: 1
+              ports:
+                - containerPort: 6379
+                  name: gcs-server
+                - containerPort: 8265
+                  name: dashboard
+                - containerPort: 10001
+                  name: client
+    workerGroupSpecs:
+      - replicas: 1
+        minReplicas: 1
+        maxReplicas: 5
+        rayStartParams: {}
+        groupName: gpu-group
+        template:
+          spec:
+            affinity:
+              nodeAffinity:
+                preferredDuringSchedulingIgnoredDuringExecution:
+                  # 优先调度到 core_node_group
+                  - weight: 100
+                    preference:
+                      matchExpressions:
+                        - key: NodeGroupType
+                          operator: In
+                          values: [ "core" ]
+                  # 优先调度到 gpu1 节点组
+                  - weight: 90
+                    preference:
+                      matchExpressions:
+                        - key: NodeGroupType
+                          operator: In
+                          values: [ "gpu" ]
+#            nodeSelector:
+#              type: karpenter
+#              NodeGroupType: g4dn-gpu-karpenter
+            tolerations:
+              - key: nvidia.com/gpu
+                operator: Exists
+                effect: NoSchedule
+            containers:
+              - name: ray-worker
+                image: rayproject/ray-ml:2.6.0
+                lifecycle:
+                  preStop:
+                    exec:
+                      command: ["/bin/sh","-c","ray stop"]
+                resources:
+                  limits:
+                    cpu: "1"
+                    memory: "8Gi"
+                    nvidia.com/gpu: 1
+                  requests:
+                    cpu: "1"
+                    memory: "8Gi"
+                    nvidia.com/gpu: 1
+ingress:
+  enabled: true
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: "/$1"
+  rules:
+    - http:
+        paths:
+          - path: /fsi-ray/dashboard/(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: fsi-ray-head-svc
+                port:
+                  number: 8265

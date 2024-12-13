@@ -1,0 +1,93 @@
+apiVersion: ray.io/v1alpha1
+kind: RayCluster
+metadata:
+  name: {{ .Values.rayCluster.metadata.name }}
+  namespace: {{ .Values.namespace }}
+spec:
+  rayVersion: {{ .Values.rayCluster.spec.rayVersion }}
+  headGroupSpec:
+    rayStartParams:
+      dashboard-host: {{ .Values.rayCluster.spec.headGroupSpec.rayStartParams.dashboardHost }}
+    template:
+      spec:
+        affinity:
+          nodeAffinity:
+            preferredDuringSchedulingIgnoredDuringExecution:
+              - weight: 100
+                preference:
+                  matchExpressions:
+                    - key: NodeGroupType
+                      operator: In
+                      values: [ "core" ]
+              - weight: 90
+                preference:
+                  matchExpressions:
+                    - key: NodeGroupType
+                      operator: In
+                      values: [ "gpu" ]
+        tolerations:
+          - key: nvidia.com/gpu
+            operator: Exists
+            effect: NoSchedule
+        containers:
+          - name: ray-head
+            image: {{ .Values.rayCluster.spec.headGroupSpec.template.spec.containers.rayHead.image }}
+            resources:
+              limits:
+                cpu: {{ .Values.rayCluster.spec.headGroupSpec.template.spec.containers.rayHead.resources.limits.cpu }}
+                memory: {{ .Values.rayCluster.spec.headGroupSpec.template.spec.containers.rayHead.resources.limits.memory }}
+                nvidia.com/gpu: {{ .Values.rayCluster.spec.headGroupSpec.template.spec.containers.rayHead.resources.limits.nvidiaGpu }}
+              requests:
+                cpu: {{ .Values.rayCluster.spec.headGroupSpec.template.spec.containers.rayHead.resources.requests.cpu }}
+                memory: {{ .Values.rayCluster.spec.headGroupSpec.template.spec.containers.rayHead.resources.requests.memory }}
+                nvidia.com/gpu: {{ .Values.rayCluster.spec.headGroupSpec.template.spec.containers.rayHead.resources.requests.nvidiaGpu }}
+            ports:
+              - containerPort: 6379
+                name: gcs-server
+              - containerPort: 8265
+                name: dashboard
+              - containerPort: 10001
+                name: client
+  workerGroupSpecs:
+    - replicas: {{ .Values.rayCluster.spec.workerGroupSpecs.replicas }}
+      minReplicas: {{ .Values.rayCluster.spec.workerGroupSpecs.minReplicas }}
+      maxReplicas: {{ .Values.rayCluster.spec.workerGroupSpecs.maxReplicas }}
+      rayStartParams: {}
+      groupName: {{ .Values.rayCluster.spec.workerGroupSpecs.groupName }}
+      template:
+        spec:
+          affinity:
+            nodeAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  preference:
+                    matchExpressions:
+                      - key: NodeGroupType
+                        operator: In
+                        values: [ "core" ]
+                - weight: 90
+                  preference:
+                    matchExpressions:
+                      - key: NodeGroupType
+                        operator: In
+                        values: [ "gpu" ]
+          tolerations:
+            - key: nvidia.com/gpu
+              operator: Exists
+              effect: NoSchedule
+          containers:
+            - name: ray-worker
+              image: {{ .Values.rayCluster.spec.workerGroupSpecs.template.spec.containers.rayWorker.image }}
+              lifecycle:
+                preStop:
+                  exec:
+                    command: ["/bin/sh","-c","ray stop"]
+              resources:
+                limits:
+                  cpu: {{ .Values.rayCluster.spec.workerGroupSpecs.template.spec.containers.rayWorker.resources.limits.cpu }}
+                  memory: {{ .Values.rayCluster.spec.workerGroupSpecs.template.spec.containers.rayWorker.resources.limits.memory }}
+                  nvidia.com/gpu: {{ .Values.rayCluster.spec.workerGroupSpecs.template.spec.containers.rayWorker.resources.limits.nvidiaGpu }}
+                requests:
+                  cpu: {{ .Values.rayCluster.spec.workerGroupSpecs.template.spec.containers.rayWorker.resources.requests.cpu }}
+                  memory: {{ .Values.rayCluster.spec.workerGroupSpecs.template.spec.containers.rayWorker.resources.requests.memory }}
+                  nvidia.com/gpu: {{ .Values.rayCluster.spec.workerGroupSpecs.template.spec.containers.rayWorker.resources.requests.nvidiaGpu }}

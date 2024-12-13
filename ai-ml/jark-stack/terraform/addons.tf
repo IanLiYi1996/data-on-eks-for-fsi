@@ -266,7 +266,7 @@ module "data_addons" {
     g5-gpu-karpenter = {
       values = [
         <<-EOT
-      name: g5-gpu-karpenter
+      name: g4dn-gpu-karpenter
       clusterName: ${module.eks.cluster_name}
       ec2NodeClass:
         amiFamily: Bottlerocket
@@ -295,7 +295,7 @@ module "data_addons" {
       nodePool:
         labels:
           - type: karpenter
-          - NodeGroupType: g5-gpu-karpenter
+          - NodeGroupType: g4dn-gpu-karpenter
         taints:
           - key: nvidia.com/gpu
             value: "Exists"
@@ -303,7 +303,7 @@ module "data_addons" {
         requirements:
           - key: "karpenter.k8s.aws/instance-family"
             operator: In
-            values: ["g5"]
+            values: ["g4dn"]
           - key: "karpenter.k8s.aws/instance-size"
             operator: In
             values: [ "2xlarge", "4xlarge", "8xlarge" ]
@@ -398,6 +398,11 @@ resource "kubernetes_namespace_v1" "jupyterhub" {
   }
 }
 
+resource "kubernetes_namespace_v1" "raycluster" {
+  metadata {
+    name = "fsi-ray"
+  }
+}
 
 resource "kubernetes_secret_v1" "huggingface_token" {
   metadata {
@@ -555,6 +560,28 @@ module "efs_config" {
 }
 
 #---------------------------------------
-# Ray Cluster Configuration
+# Ray Cluster Config
 #---------------------------------------
+module "ray_cluster" {
+  source  = "aws-ia/eks-blueprints-addons/aws"
+  version = "~> 1.2"
 
+  cluster_name      = module.eks.cluster_name
+  cluster_endpoint  = module.eks.cluster_endpoint
+  cluster_version   = module.eks.cluster_version
+  oidc_provider_arn = module.eks.oidc_provider_arn
+
+  helm_releases = {
+    ray_cluster = {
+      name             = "ray-cluster"
+      description      = "A Helm chart for RayCluster"
+      namespace        = "fsi-ray"
+      create_namespace = false
+      chart            = "${path.module}/helm-values/raycluster"  # 更新路径
+      chart_version    = "0.1.0"
+      values           = [file("${path.module}/helm-values/raycluster/values.yaml")]
+    }
+  }
+
+  depends_on = [kubernetes_storage_class.default_gp3, kubernetes_namespace_v1.raycluster]
+}

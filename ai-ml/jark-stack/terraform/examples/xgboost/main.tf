@@ -49,7 +49,7 @@ module "xgboost_cluster" {
     yamlencode({
       image = {
         repository = "rayproject/ray-ml"
-        tag        = "2.40.0"
+        tag        = "2.6.0"
         pullPolicy = "IfNotPresent"
       }
       head = {
