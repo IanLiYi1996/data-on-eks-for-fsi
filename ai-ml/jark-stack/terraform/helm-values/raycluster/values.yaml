@@ -6,10 +6,23 @@ rayCluster:
   spec:
     rayVersion: '2.6.0'
     headGroupSpec:
+      serviceType: LoadBalancer
       rayStartParams:
         dashboardHost: '0.0.0.0'
+      serviceAnnotations:
+        service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
+        service.beta.kubernetes.io/aws-load-balancer-scheme: internal
+        # service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing # Private Load Balancer can only be accessed within the VPC
+        service.beta.kubernetes.io/aws-load-balancer-type: external
+        service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: 'true'
+        service.beta.kubernetes.io/aws-load-balancer-ip-address-type: ipv4
       template:
         spec:
+          volumes:
+            - name: efs-persist
+              persistentVolumeClaim:
+                claimName: efs-persist  # PVC 的名称
+                namespace: jupyterhub   # 引用 PVC 所在命名空间
           affinity:
             nodeAffinity:
               preferredDuringSchedulingIgnoredDuringExecution:
@@ -31,6 +44,9 @@ rayCluster:
               effect: NoSchedule
           containers:
             rayHead:
+              volumeMounts:
+                - name: efs-persist
+                  mountPath: /mnt/efs
               image: rayproject/ray-ml:2.6.0
               resources:
                 limits:
@@ -56,6 +72,11 @@ rayCluster:
       groupName: gpu-group
       template:
         spec:
+          volumes:
+            - name: efs-persist
+              persistentVolumeClaim:
+                claimName: efs-persist
+                namespace: jupyterhub
           affinity:
             nodeAffinity:
               preferredDuringSchedulingIgnoredDuringExecution:
@@ -77,6 +98,9 @@ rayCluster:
               effect: NoSchedule
           containers:
             rayWorker:
+              volumeMounts:
+                - name: efs-persist
+                  mountPath: /mnt/efs
               image: rayproject/ray-ml:2.6.0
               lifecycle:
                 preStop:
