@@ -1,4 +1,5 @@
 hub:
+  command: [ "sh", "-c", "pip install boto3 && pip install jupyterhub==4.1.0 && jupyterhub --config /usr/local/etc/jupyterhub/jupyterhub_config.py" ]
   config:
     Authenticator:
       admin_users:
@@ -13,6 +14,15 @@ hub:
     JupyterHub:
       authenticator_class: dummy
       http_timeout: 1200  # 与 singleuser.startTimeout 一致
+    KubeSpawner:
+      k8s_api_request_timeout: 240
+  extraConfig:
+    jupyterhub_config.py: |-
+      c.Spawner.start_timeout = 1200
+      c.KubeSpawner.start_timeout = 1200
+      c.Spawner.http_timeout = 1200  
+      c.Spawner.args = ['--allow-root']
+
 proxy:
   service:
     annotations:
@@ -34,19 +44,19 @@ singleuser:
               display_name: "PySpark 3.5.0 + Python 3.11"
               default: true
               kubespawner_override:
-                image: cschranz/gpu-jupyter:v1.5_cuda-11.6_ubuntu-20.04_python-only
+                image: jupyter/pyspark-notebook:spark-3.5.0
             pyspark341:
               display_name: "PySpark 3.4.1 + Python 3.11"
               kubespawner_override:
-                image: cschranz/gpu-jupyter:v1.5_cuda-11.6_ubuntu-20.04_python-only
+                image: jupyter/pyspark-notebook:spark-3.4.1
       kubespawner_override:
         node_selector:
           NodePool: x86-cpu-karpenter
         cpu_guarantee: 2
-        mem_guarantee: 8G
-        cpu_limit: 4
-        mem_limit: 8G
-      cmd: null
+        mem_guarantee: 10G
+        cpu_limit: 3.5
+        mem_limit: 14G
+      cmd: "start-singleuser.sh"
     - display_name: Data Science (GPU - G4dn.2xlarge)
       description: "GPU with G4dn instances | Karpenter Autoscaler"
       kubespawner_override:
@@ -64,10 +74,10 @@ singleuser:
             effect: "NoSchedule"
         extra_resource_limits:
           nvidia.com/gpu: "1"
-        cpu_guarantee: 2
-        mem_guarantee: 10G
-        cpu_limit: 2
-        mem_limit: 10G
+        cpu_guarantee: 4
+        mem_guarantee: 16G
+        cpu_limit: 7
+        mem_limit: 30G
         cmd: "start-singleuser.sh"
 #  extraEnv:
 #    HUGGING_FACE_HUB_TOKEN:
@@ -81,6 +91,9 @@ singleuser:
       pvcName: "efs-persist"
       subPath: "home/{username}"
     extraVolumes:
+      - name: shm-volume
+        emptyDir:
+          medium: Memory
       - name: notebook
         configMap:
           name: notebook
@@ -88,11 +101,14 @@ singleuser:
         persistentVolumeClaim:
           claimName: efs-persist-shared
     extraVolumeMounts:
+      - name: shm-volume
+        mountPath: /dev/shm
       - name: notebook
         mountPath: /home/jovyan/dogbooth
       - name: jupyterhub-shared
         mountPath: /home/shared
         readOnly: false
+#  serviceAccountName: ${jupyter_single_user_sa_name}
   allowPrivilegeEscalation: true
   extraPodConfig: # This is needed for Jovyan user running in every single pod, access the Service Account
     securityContext:
