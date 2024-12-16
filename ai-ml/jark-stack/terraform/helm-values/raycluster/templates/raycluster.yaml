@@ -46,7 +46,7 @@ spec:
           - name: ray-head
             volumeMounts:
               - name: efs-persist
-                mountPath: /mnt/efs
+                mountPath: /home/ray/efs
             image: {{ .Values.rayCluster.spec.headGroupSpec.template.spec.containers.rayHead.image }}
             resources:
               limits:
@@ -100,7 +100,7 @@ spec:
             - name: ray-worker
               volumeMounts:
                 - name: efs-persist
-                  mountPath: /mnt/efs
+                  mountPath: /home/ray/efs
               image: {{ .Values.rayCluster.spec.workerGroupSpecs.template.spec.containers.rayWorker.image }}
               lifecycle:
                 preStop:
