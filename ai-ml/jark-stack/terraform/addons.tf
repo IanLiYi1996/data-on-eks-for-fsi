@@ -286,7 +286,7 @@ module "data_addons" {
       name: g4dn-gpu-karpenter
       clusterName: ${module.eks.cluster_name}
       ec2NodeClass:
-        amiFamily: Bottlerocket
+        amiFamily: AL2
         karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
         subnetSelectorTerms:
           id: ${module.vpc.private_subnets[2]}
@@ -346,7 +346,7 @@ module "data_addons" {
       name: x86-cpu-karpenter
       clusterName: ${module.eks.cluster_name}
       ec2NodeClass:
-        amiFamily: Bottlerocket
+        amiFamily: AL2
         karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
         subnetSelectorTerms:
           id: ${module.vpc.private_subnets[3]}

@@ -48,11 +48,21 @@ singleuser:
       - name: notebook
         configMap:
           name: notebook
+      - name: efs-persist
+        persistentVolumeClaim:
+          claimName: efs-persist  # 挂载 efs-persist PVC
+      - name: efs-persist-shared
+        persistentVolumeClaim:
+          claimName: efs-persist-shared  # 挂载 efs-persist-shared PVC
     extraVolumeMounts:
       - name: shm-volume
         mountPath: /dev/shm
       - name: notebook
         mountPath: /home/jovyan/dogbooth
+      - name: efs-persist
+        mountPath: /home/jovyan/efs-persist  # 挂载到 /home/jovyan/efs-persist
+      - name: efs-persist-shared
+        mountPath: /home/jovyan/efs-persist-shared  # 挂载到 /home/jovyan/efs-persist-shared
   extraTolerations:
     - key: nvidia.com/gpu
       operator: Exists
