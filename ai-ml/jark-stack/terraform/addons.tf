@@ -571,9 +571,26 @@ module "efs_config" {
         EOT
       ]
     }
+    efs-shared-ray = {
+      name             = "efs-shared-ray"
+      description      = "A Helm chart for shared storage configurations"
+      namespace        = "fsi-ray"
+      create_namespace = false
+      chart            = "${path.module}/helm-values/efs"
+      chart_version    = "0.0.1"
+      values = [
+        <<-EOT
+          pv:
+            name: efs-shared-ray
+            dnsName: ${aws_efs_file_system.efs.dns_name}
+          pvc:
+            name: efs-shared-ray
+        EOT
+      ]
+    }
   }
 
-  depends_on = [kubernetes_namespace_v1.jupyterhub]
+  depends_on = [kubernetes_namespace_v1.jupyterhub, kubernetes_namespace_v1.raycluster]
 }
 
 #---------------------------------------

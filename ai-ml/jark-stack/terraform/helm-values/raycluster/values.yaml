@@ -19,10 +19,9 @@ rayCluster:
       template:
         spec:
           volumes:
-            - name: efs-persist
-              persistentVolumeClaim:
-                claimName: efs-persist  # PVC 的名称
-                namespace: jupyterhub   # 引用 PVC 所在命名空间
+              - name: efs-shared-ray
+                persistentVolumeClaim:
+                  claimName: efs-shared-ray  # PVC 的名称
           affinity:
             nodeAffinity:
               preferredDuringSchedulingIgnoredDuringExecution:
@@ -45,7 +44,7 @@ rayCluster:
           containers:
             rayHead:
               volumeMounts:
-                - name: efs-persist
+                - name: efs-shared-ray
                   mountPath: /home/ray/efs
               image: rayproject/ray-ml:2.6.0
               resources:
@@ -73,10 +72,9 @@ rayCluster:
       template:
         spec:
           volumes:
-            - name: efs-persist
-              persistentVolumeClaim:
-                claimName: efs-persist
-                namespace: jupyterhub
+              - name: efs-shared-ray
+                persistentVolumeClaim:
+                  claimName: efs-shared-ray  # PVC 的名称
           affinity:
             nodeAffinity:
               preferredDuringSchedulingIgnoredDuringExecution:
@@ -99,8 +97,8 @@ rayCluster:
           containers:
             rayWorker:
               volumeMounts:
-                - name: efs-persist
-                  mountPath: /home/ray/efs
+                  - name: efs-shared-ray
+                    mountPath: /home/ray/efs
               image: rayproject/ray-ml:2.6.0
               lifecycle:
                 preStop:
