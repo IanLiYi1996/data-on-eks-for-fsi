@@ -619,3 +619,25 @@ module "ray_cluster" {
 
   depends_on = [kubernetes_storage_class.default_gp3, kubernetes_namespace_v1.raycluster, module.efs_config]
 }
+
+  #---------------------------------------
+  # Metrics Server
+  #---------------------------------------
+  enable_metrics_server = true
+  metrics_server = {
+    timeout = "300"
+    values  = [templatefile("${path.module}/helm-values/metrics-server/values.yaml", {})]
+  }
+
+  #---------------------------------------
+  # Cluster Autoscaler
+  #---------------------------------------
+  enable_cluster_autoscaler = true
+  cluster_autoscaler = {
+    timeout     = "300"
+    create_role = true
+    values = [templatefile("${path.module}/helm-values/cluster-autoscaler/values.yaml", {
+      aws_region     = var.region,
+      eks_cluster_id = module.eks.cluster_name
+    })]
+  }
