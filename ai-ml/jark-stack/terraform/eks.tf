@@ -109,7 +109,8 @@ module "eks" {
       }
 
       tags = merge(local.tags, {
-        Name = "core-node-grp"
+        Name = "core-node-grp",
+        "karpenter.sh/discovery" = local.name
       })
     }
 
@@ -125,8 +126,8 @@ module "eks" {
 
       ami_type     = "AL2_x86_64_GPU"
       min_size     = 0
-      max_size     = 4
-      desired_size = 2
+      max_size     = 5
+      desired_size = 0
 
       instance_types = ["g4dn.2xlarge"]
 
@@ -144,7 +145,8 @@ module "eks" {
       }
 
       tags = merge(local.tags, {
-        Name = "gpu-node-grp"
+        Name = "gpu-node-grp",
+        "karpenter.sh/discovery" = local.name
       })
     }
 

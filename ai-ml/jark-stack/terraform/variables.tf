@@ -1,6 +1,6 @@
 variable "name" {
   description = "Name of the VPC and EKS Cluster"
-  default     = "jark-stack"
+  default     = "jark-stack-1217-demo"
   type        = string
 }
 
@@ -35,7 +35,7 @@ variable "secondary_cidr_blocks" {
 variable "huggingface_token" {
   description = "Hugging Face Secret Token"
   type        = string
-  default     = ""
+  default     = "DUMMY_TOKEN_REPLACE_ME"
   sensitive   = true
 }
 

@@ -37,6 +37,31 @@ resource "kubernetes_storage_class" "default_gp3" {
 }
 
 #---------------------------------------------------------------
+# EFS Storage Class
+#---------------------------------------------------------------
+resource "kubernetes_storage_class" "efs_storage_class" {
+  metadata {
+    name = "efs-fc"
+    annotations = {
+      "storageclass.kubernetes.io/is-default-class" = "false"
+    }
+  }
+
+  storage_provisioner = "efs.csi.aws.com" # AWS EFS CSI 驱动
+  reclaim_policy      = "Retain"         # EFS 通常是保留数据
+  volume_binding_mode = "Immediate"
+
+  parameters = {
+    provisioningMode = "efs-ap" # Access Point 模式
+    fileSystemId     = aws_efs_file_system.efs.id # 替换为你的 EFS 文件系统 ID
+    directoryPerms   = "700"    # 目录权限
+  }
+
+  depends_on = [aws_efs_file_system.efs]
+}
+
+
+#---------------------------------------------------------------
 # IRSA for EBS CSI Driver
 #---------------------------------------------------------------
 module "ebs_csi_driver_irsa" {
@@ -51,20 +76,6 @@ module "ebs_csi_driver_irsa" {
     }
   }
   tags = local.tags
-}
-
-module "efs_csi_driver_irsa" {
-  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-  version = "~> 5.20"
-  role_name_prefix      = format("%s-%s-", local.name, "efs-csi-driver")
-  attach_efs_csi_policy = true
-
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["kube-system:efs-csi-controller-sa"]
-    }
-  }
 }
 
 #---------------------------------------------------------------
@@ -85,9 +96,6 @@ module "eks_blueprints_addons" {
   eks_addons = {
     aws-ebs-csi-driver = {
       service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
-    }
-    aws-efs-csi-driver = {
-      service_account_role_arn = module.efs_csi_driver_irsa.iam_role_arn
     }
     coredns = {
       preserve = true
@@ -120,6 +128,19 @@ module "eks_blueprints_addons" {
   enable_ingress_nginx = true
   ingress_nginx = {
     values = [templatefile("${path.module}/helm-values/ingress-nginx-values.yaml", {})]
+  }
+
+  #---------------------------------------
+  # Cluster Autoscaler
+  #---------------------------------------
+  enable_cluster_autoscaler = true
+  cluster_autoscaler = {
+    timeout     = "300"
+    create_role = true
+    values = [templatefile("${path.module}/helm-values/cluster-autoscaler/values.yaml", {
+      aws_region     = var.region,
+      eks_cluster_id = module.eks.cluster_name
+    })]
   }
 
   #---------------------------------------
@@ -283,7 +304,7 @@ module "data_addons" {
     g5-gpu-karpenter = {
       values = [
         <<-EOT
-      name: g4dn-gpu-karpenter
+      name: g5-gpu-karpenter
       clusterName: ${module.eks.cluster_name}
       ec2NodeClass:
         amiFamily: AL2
@@ -312,10 +333,14 @@ module "data_addons" {
       nodePool:
         labels:
           - type: karpenter
-          - NodeGroupType: g4dn-gpu-karpenter
+          - NodeGroupType: g5-gpu-karpenter
+          - hub.jupyter.org/node-purpose: user
         taints:
           - key: nvidia.com/gpu
             value: "Exists"
+            effect: "NoSchedule"
+          - key: hub.jupyter.org/dedicated
+            value: "user"
             effect: "NoSchedule"
         requirements:
           - key: "karpenter.k8s.aws/instance-family"
@@ -373,6 +398,7 @@ module "data_addons" {
         labels:
           - type: karpenter
           - NodeGroupType: x86-cpu-karpenter
+          - hub.jupyter.org/node-purpose: user
         requirements:
           - key: "karpenter.k8s.aws/instance-family"
             operator: In
@@ -405,81 +431,6 @@ module "data_addons" {
 }
 
 
-#---------------------------------------------------------------
-# Additional Resources
-#---------------------------------------------------------------
-
-resource "kubernetes_namespace_v1" "jupyterhub" {
-  metadata {
-    name = "jupyterhub"
-  }
-}
-
-resource "kubernetes_namespace_v1" "raycluster" {
-  metadata {
-    name = "fsi-ray"
-  }
-}
-
-resource "kubernetes_secret_v1" "huggingface_token" {
-  metadata {
-    name      = "hf-token"
-    namespace = kubernetes_namespace_v1.jupyterhub.id
-  }
-
-  data = {
-    token = var.huggingface_token
-  }
-}
-
-resource "kubernetes_config_map_v1" "notebook" {
-  metadata {
-    name      = "notebook"
-    namespace = kubernetes_namespace_v1.jupyterhub.id
-  }
-
-  data = {
-    "dogbooth.ipynb" = file("${path.module}/src/notebook/dogbooth.ipynb")
-  }
-}
-
-#---------------------------------------------------------------
-# Grafana Admin credentials resources
-# Login to AWS secrets manager with the same role as Terraform to extract the Grafana admin password with the secret name as "grafana"
-#---------------------------------------------------------------
-data "aws_secretsmanager_secret_version" "admin_password_version" {
-  secret_id  = aws_secretsmanager_secret.grafana.id
-  depends_on = [aws_secretsmanager_secret_version.grafana]
-}
-
-resource "random_password" "grafana" {
-  length           = 16
-  special          = true
-  override_special = "@_"
-}
-
-#tfsec:ignore:aws-ssm-secret-use-customer-key
-resource "aws_secretsmanager_secret" "grafana" {
-  name_prefix             = "${local.name}-oss-grafana"
-  recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
-}
-
-resource "aws_secretsmanager_secret_version" "grafana" {
-  secret_id     = aws_secretsmanager_secret.grafana.id
-  secret_string = random_password.grafana.result
-}
-
-data "aws_iam_policy_document" "karpenter_controller_policy" {
-  statement {
-    actions = [
-      "ec2:RunInstances",
-      "ec2:CreateLaunchTemplate",
-    ]
-    resources = ["*"]
-    effect    = "Allow"
-    sid       = "KarpenterControllerAdditionalPolicy"
-  }
-}
 
 #---------------------------------------------------------------
 # EFS Filesystem for private volumes per user
@@ -566,6 +517,7 @@ module "efs_config" {
           pv:
             name: efs-persist-shared
             dnsName: ${aws_efs_file_system.efs.dns_name}
+            path: /shared
           pvc:
             name: efs-persist-shared
         EOT
@@ -574,7 +526,7 @@ module "efs_config" {
     efs-shared-ray = {
       name             = "efs-shared-ray"
       description      = "A Helm chart for shared storage configurations"
-      namespace        = "fsi-ray"
+      namespace        = "fsi-ray-cpu"
       create_namespace = false
       chart            = "${path.module}/helm-values/efs"
       chart_version    = "0.0.1"
@@ -590,32 +542,95 @@ module "efs_config" {
     }
   }
 
-  depends_on = [kubernetes_namespace_v1.jupyterhub, kubernetes_namespace_v1.raycluster]
+  depends_on = [kubernetes_namespace_v1.jupyterhub, kubernetes_namespace_v1.fsi-ray-cpu]
 }
 
-#---------------------------------------
-# Ray Cluster Config
-#---------------------------------------
-module "ray_cluster" {
-  source  = "aws-ia/eks-blueprints-addons/aws"
-  version = "~> 1.2"
 
-  cluster_name      = module.eks.cluster_name
-  cluster_endpoint  = module.eks.cluster_endpoint
-  cluster_version   = module.eks.cluster_version
-  oidc_provider_arn = module.eks.oidc_provider_arn
 
-  helm_releases = {
-    ray_cluster = {
-      name             = "ray-cluster"
-      description      = "A Helm chart for RayCluster"
-      namespace        = "fsi-ray"
-      create_namespace = false
-      chart            = "${path.module}/helm-values/raycluster"  # 更新路径
-      chart_version    = "0.1.0"
-      values           = [file("${path.module}/helm-values/raycluster/values.yaml")]
-    }
+#---------------------------------------------------------------
+# Additional Resources
+#---------------------------------------------------------------
+
+resource "kubernetes_namespace_v1" "jupyterhub" {
+  metadata {
+    name = "jupyterhub"
+  }
+}
+
+resource "kubernetes_namespace_v1" "fsi-ray-cpu" {
+  metadata {
+    name = "fsi-ray-cpu"
+  }
+}
+
+
+
+resource "kubernetes_secret_v1" "huggingface_token" {
+  metadata {
+    name      = "hf-token"
+    namespace = kubernetes_namespace_v1.jupyterhub.id
   }
 
-  depends_on = [kubernetes_storage_class.default_gp3, kubernetes_namespace_v1.raycluster, module.efs_config]
+  data = {
+    token = var.huggingface_token
+  }
+}
+
+resource "kubernetes_config_map_v1" "notebook" {
+  metadata {
+    name      = "notebook"
+    namespace = kubernetes_namespace_v1.jupyterhub.id
+  }
+
+  data = {
+    "dogbooth.ipynb" = file("${path.module}/src/notebook/dogbooth.ipynb")
+  }
+}
+
+#---------------------------------------------------------------
+# Grafana Admin credentials resources
+# Login to AWS secrets manager with the same role as Terraform to extract the Grafana admin password with the secret name as "grafana"
+#---------------------------------------------------------------
+data "aws_secretsmanager_secret_version" "admin_password_version" {
+  secret_id  = aws_secretsmanager_secret.grafana.id
+  depends_on = [aws_secretsmanager_secret_version.grafana]
+}
+
+resource "random_password" "grafana" {
+  length           = 16
+  special          = true
+  override_special = "@_"
+}
+
+#tfsec:ignore:aws-ssm-secret-use-customer-key
+resource "aws_secretsmanager_secret" "grafana" {
+  name_prefix             = "${local.name}-oss-grafana"
+  recovery_window_in_days = 0 # Set to zero for this example to force delete during Terraform destroy
+}
+
+resource "aws_secretsmanager_secret_version" "grafana" {
+  secret_id     = aws_secretsmanager_secret.grafana.id
+  secret_string = random_password.grafana.result
+}
+
+data "aws_iam_policy_document" "karpenter_controller_policy" {
+  statement {
+    actions = [
+      "ec2:RunInstances",
+      "ec2:CreateLaunchTemplate"
+    ]
+    resources = ["*"]
+    effect    = "Allow"
+    sid       = "KarpenterControllerAdditionalPolicy"
+  }
+
+  statement {
+    actions = [
+      "iam:CreateServiceLinkedRole",
+      "iam:PutRolePolicy"
+    ]
+    resources = ["arn:aws:iam::*:role/aws-service-role/spot.amazonaws.com/AWSServiceRoleForEC2Spot"]
+    effect    = "Allow"
+    sid       = "KarpenterControllerCreateServiceLinkedRole"
+  }
 }

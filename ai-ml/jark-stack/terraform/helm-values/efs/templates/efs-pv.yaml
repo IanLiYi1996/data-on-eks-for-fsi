@@ -9,4 +9,4 @@ spec:
     - ReadWriteMany
   nfs:
     server: {{ .Values.pv.dnsName }}
-    path: "/"
+    path: {{ .Values.pv.path | default "/" }}

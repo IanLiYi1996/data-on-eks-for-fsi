@@ -18,7 +18,7 @@ spec:
       spec:
         containers:
           - name: ray-head
-            image: public.ecr.aws/h3o5n2r0/dogbooth:0.0.1-gpu
+            image: rayproject/ray-ml:2.6.0
             resources:
               limits:
                 cpu: 2
@@ -45,7 +45,7 @@ spec:
         spec:
           containers:
             - name: ray-worker
-              image: public.ecr.aws/h3o5n2r0/dogbooth:0.0.1-gpu
+              image: rayproject/ray-ml:2.6.0
               lifecycle:
                 preStop:
                   exec:
