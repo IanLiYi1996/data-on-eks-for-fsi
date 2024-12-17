@@ -617,5 +617,5 @@ module "ray_cluster" {
     }
   }
 
-  depends_on = [kubernetes_storage_class.default_gp3, kubernetes_namespace_v1.raycluster]
+  depends_on = [kubernetes_storage_class.default_gp3, kubernetes_namespace_v1.raycluster, module.efs_config]
 }
