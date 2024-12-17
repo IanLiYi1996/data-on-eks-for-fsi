@@ -12,6 +12,15 @@ hub:
       password: never-do-this
     JupyterHub:
       authenticator_class: dummy
+      http_timeout: 1200  # 与 singleuser.startTimeout 一致
+    KubeSpawner:
+      k8s_api_request_timeout: 240
+  extraConfig:
+    jupyterhub_config.py: |-
+      c.Spawner.start_timeout = 1200
+      c.KubeSpawner.start_timeout = 1200
+      c.Spawner.http_timeout = 1200  
+      c.Spawner.args = ['--allow-root']
 proxy:
   service:
     annotations:
@@ -27,19 +36,17 @@ singleuser:
     tag: v1.5_cuda-11.6_ubuntu-20.04_python-only
     pullPolicy: Always
   cmd: null
-  startTimeout: 600
+  startTimeout: 1200
   memory:
     guarantee: 8G
   extraResource:
     limits:
       nvidia.com/gpu: "1"
-  extraEnv:
-    HUGGING_FACE_HUB_TOKEN:
-      valueFrom:
-        secretKeyRef:
-          name: hf-token
-          key: token
   storage:
+    type: "static"
+    static:
+      pvcName: "efs-persist"
+      subPath: "home/{username}"
     capacity: 25Gi
     extraVolumes:
       - name: shm-volume
@@ -48,21 +55,34 @@ singleuser:
       - name: notebook
         configMap:
           name: notebook
-      - name: efs-persist
-        persistentVolumeClaim:
-          claimName: efs-persist  # 挂载 efs-persist PVC
-      - name: efs-persist-shared
-        persistentVolumeClaim:
-          claimName: efs-persist-shared  # 挂载 efs-persist-shared PVC
+#      - name: efs-persist
+#        persistentVolumeClaim:
+#          claimName: efs-persist  # 挂载 efs-persist PVC
+#      - name: efs-persist-shared
+#        persistentVolumeClaim:
+#          claimName: efs-persist-shared  # 挂载 efs-persist-shared PVC
     extraVolumeMounts:
       - name: shm-volume
         mountPath: /dev/shm
       - name: notebook
         mountPath: /home/jovyan/dogbooth
-      - name: efs-persist
-        mountPath: /home/jovyan/efs-persist  # 挂载到 /home/jovyan/efs-persist
-      - name: efs-persist-shared
-        mountPath: /home/jovyan/efs-persist-shared  # 挂载到 /home/jovyan/efs-persist-shared
+#      - name: efs-persist
+#        mountPath: /home/jovyan/efs-persist  # 挂载到 /home/jovyan/efs-persist
+#      - name: efs-persist-shared
+#        mountPath: /home/jovyan/efs-persist-shared  # 挂载到 /home/jovyan/efs-persist-shared
+  allowPrivilegeEscalation: true
+  extraPodConfig: # This is needed for Jovyan user running in every single pod, access the Service Account
+    securityContext:
+      fsGroup: 100
+  extraEnv: # Sudo needed to configure the proper permissions to start the notebook instance
+    GRANT_SUDO: "yes"
+    NOTEBOOK_ARGS: "--allow-root"
+    CHOWN_HOME: "no"
+    CHOWN_HOME_OPTS: "-R"
+#    CHOWN_EXTRA: "/home/shared"
+  uid: 0
+  fsGid: 0
+
   extraTolerations:
     - key: nvidia.com/gpu
       operator: Exists
