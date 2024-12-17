@@ -40,11 +40,11 @@ singleuser:
           name: hf-token
           key: token
   storage:
-    type: "static"
-    static:
-      pvcName: "efs-persist"
-      subPath: "home/{username}"
-    capacity: 25Gi
+    capacity: 25Gi   # GP3 存储容量
+#    type: "static"
+#    static:
+#      pvcName: "efs-persist"
+#      subPath: "home/{username}"
     extraVolumes:
       - name: shm-volume
         emptyDir:
@@ -52,9 +52,9 @@ singleuser:
       - name: notebook
         configMap:
           name: notebook
-#      - name: efs-persist
-#        persistentVolumeClaim:
-#          claimName: efs-persist  # 挂载 efs-persist PVC
+      - name: efs-persist
+        persistentVolumeClaim:
+          claimName: efs-persist  # 挂载 efs-persist PVC
 #      - name: efs-persist-shared
 #        persistentVolumeClaim:
 #          claimName: efs-persist-shared  # 挂载 efs-persist-shared PVC
@@ -63,8 +63,8 @@ singleuser:
         mountPath: /dev/shm
       - name: notebook
         mountPath: /home/jovyan/dogbooth
-#      - name: efs-persist
-#        mountPath: /home/jovyan/efs-persist  # 挂载到 /home/jovyan/efs-persist
+      - name: efs-persist
+        mountPath: /home/jovyan/efs-persist  # 挂载到 /home/jovyan/efs-persist
 #      - name: efs-persist-shared
 #        mountPath: /home/jovyan/efs-persist-shared  # 挂载到 /home/jovyan/efs-persist-shared
   extraTolerations:

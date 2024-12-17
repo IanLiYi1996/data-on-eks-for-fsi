@@ -293,7 +293,7 @@ module "data_addons" {
   enable_karpenter_resources = true
   karpenter_resources_helm_config = {
 
-    g5-gpu-karpenter = {
+    g4dn-gpu-karpenter = {
       values = [
         <<-EOT
       name: g4dn-gpu-karpenter
@@ -326,6 +326,7 @@ module "data_addons" {
         labels:
           - type: karpenter
           - NodeGroupType: g4dn-gpu-karpenter
+          - hub.jupyter.org/node-purpose: user
         taints:
           - key: nvidia.com/gpu
             value: "Exists"
@@ -386,6 +387,7 @@ module "data_addons" {
         labels:
           - type: karpenter
           - NodeGroupType: x86-cpu-karpenter
+          - hub.jupyter.org/node-purpose: user
         requirements:
           - key: "karpenter.k8s.aws/instance-family"
             operator: In
