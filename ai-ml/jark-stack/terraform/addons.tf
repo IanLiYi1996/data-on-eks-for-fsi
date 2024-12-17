@@ -340,6 +340,7 @@ module "data_addons" {
             value: "Exists"
             effect: "NoSchedule"
           - key: hub.jupyter.org/dedicated
+            operator: "Equal"
             value: "user"
             effect: "NoSchedule"
         requirements:
