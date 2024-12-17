@@ -517,7 +517,6 @@ module "efs_config" {
           pv:
             name: efs-persist-shared
             dnsName: ${aws_efs_file_system.efs.dns_name}
-            path: /shared
           pvc:
             name: efs-persist-shared
         EOT
