@@ -5,9 +5,10 @@ hub:
       admin_users:
         - admin1
       allowed_users:
-        - user1
+        - quant-researcher
+        - algo-trader
+        - data-scientist
         - pinyusu
-        - liyi
     # testing only - do not do this for production
     DummyAuthenticator:
       password: never-do-this

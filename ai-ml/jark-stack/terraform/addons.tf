@@ -36,6 +36,51 @@ resource "kubernetes_storage_class" "default_gp3" {
   depends_on = [kubernetes_annotations.disable_gp2]
 }
 
+#-----------------------------------------------------------------------------------------
+# JupyterHub Sinlgle User IRSA, maybe that block could be incorporated in add-on registry
+#-----------------------------------------------------------------------------------------
+
+
+module "jupyterhub_single_user_irsa" {
+  source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+
+  role_name = "${module.eks.cluster_name}-jupyterhub-single-user-sa"
+
+  role_policy_arns = {
+    policy = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess" # Policy needs to be defined based in what you need to give access to your notebook instances.
+  }
+
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["${kubernetes_namespace_v1.jupyterhub.metadata[0].name}:jupyterhub-single-user"]
+    }
+  }
+}
+
+resource "kubernetes_service_account_v1" "jupyterhub_single_user_sa" {
+  metadata {
+    name        = "${module.eks.cluster_name}-jupyterhub-single-user"
+    namespace   = kubernetes_namespace_v1.jupyterhub.metadata[0].name
+    annotations = { "eks.amazonaws.com/role-arn" : module.jupyterhub_single_user_irsa.iam_role_arn }
+  }
+
+  automount_service_account_token = true
+}
+
+resource "kubernetes_secret_v1" "jupyterhub_single_user" {
+  metadata {
+    name      = "${module.eks.cluster_name}-jupyterhub-single-user-secret"
+    namespace = kubernetes_namespace_v1.jupyterhub.metadata[0].name
+    annotations = {
+      "kubernetes.io/service-account.name"      = kubernetes_service_account_v1.jupyterhub_single_user_sa.metadata[0].name
+      "kubernetes.io/service-account.namespace" = kubernetes_namespace_v1.jupyterhub.metadata[0].name
+    }
+  }
+
+  type = "kubernetes.io/service-account-token"
+}
+
 #---------------------------------------------------------------
 # EFS Storage Class
 #---------------------------------------------------------------
@@ -78,6 +123,21 @@ module "ebs_csi_driver_irsa" {
   tags = local.tags
 }
 
+module "efs_csi_driver_irsa" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
+  version = "~> 5.20"
+  role_name_prefix      = format("%s-%s-", local.name, "efs-csi-driver")
+  attach_efs_csi_policy = true
+
+  oidc_providers = {
+    main = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:efs-csi-controller-sa"]
+    }
+  }
+}
+
+
 #---------------------------------------------------------------
 # EKS Blueprints Addons
 #---------------------------------------------------------------
@@ -96,6 +156,9 @@ module "eks_blueprints_addons" {
   eks_addons = {
     aws-ebs-csi-driver = {
       service_account_role_arn = module.ebs_csi_driver_irsa.iam_role_arn
+    }
+    aws-efs-csi-driver = {
+      service_account_role_arn = module.efs_csi_driver_irsa.iam_role_arn
     }
     coredns = {
       preserve = true
@@ -523,26 +586,8 @@ module "efs_config" {
         EOT
       ]
     }
-    efs-shared-ray = {
-      name             = "efs-shared-ray"
-      description      = "A Helm chart for shared storage configurations"
-      namespace        = "fsi-ray-cpu"
-      create_namespace = false
-      chart            = "${path.module}/helm-values/efs"
-      chart_version    = "0.0.1"
-      values = [
-        <<-EOT
-          pv:
-            name: efs-shared-ray
-            dnsName: ${aws_efs_file_system.efs.dns_name}
-          pvc:
-            name: efs-shared-ray
-        EOT
-      ]
-    }
   }
-
-  depends_on = [kubernetes_namespace_v1.jupyterhub, kubernetes_namespace_v1.fsi-ray-cpu]
+  depends_on = [kubernetes_namespace_v1.jupyterhub]
 }
 
 
@@ -554,12 +599,6 @@ module "efs_config" {
 resource "kubernetes_namespace_v1" "jupyterhub" {
   metadata {
     name = "jupyterhub"
-  }
-}
-
-resource "kubernetes_namespace_v1" "fsi-ray-cpu" {
-  metadata {
-    name = "fsi-ray-cpu"
   }
 }
 
