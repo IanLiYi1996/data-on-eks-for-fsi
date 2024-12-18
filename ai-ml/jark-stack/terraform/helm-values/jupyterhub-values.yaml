@@ -23,6 +23,7 @@ hub:
       c.KubeSpawner.start_timeout = 1200
       c.Spawner.http_timeout = 1200  
       c.Spawner.args = ['--allow-root']
+      c.KubeSpawner.notebook_dir = '/home'
 #      c.KubeSpawner.enable_user_namespaces = true
 #      c.KubeSpawner.user_namespace_template = 'jupyter-{username}'
 
@@ -63,7 +64,7 @@ singleuser:
     - display_name: Data Science (GPU - G4dn.2xlarge)
       description: "GPU with G4dn instances | Karpenter Autoscaler"
       kubespawner_override:
-        image: cschranz/gpu-jupyter:v1.5_cuda-11.6_ubuntu-20.04_python-only
+        image: cschranz/gpu-jupyter:v1.6_cuda-11.8_ubuntu-22.04_python-only
         node_selector:
           NodePool: g4dn-gpu-karpenter
           hub.jupyter.org/node-purpose: user

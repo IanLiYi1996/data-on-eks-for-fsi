@@ -41,12 +41,23 @@ spec:
           - key: nvidia.com/gpu
             operator: Exists
             effect: NoSchedule
+        initContainers: # 添加 initContainers
+          - name: install-python-packages
+            image: rayproject/ray-ml:2.6.0
+            command: [ "/bin/sh", "-c" ]
+            args: [ "pip install qstrader && echo 'Packages installed.'" ]
+            volumeMounts:
+              - name: efs-shared-ray
+                mountPath: /home/shared  # 安装可以与共享卷交互
         containers:
           - name: ray-head
             volumeMounts:
               - name: efs-shared-ray
                 mountPath: /home/ray/ianleely
                 subPath: ianleely
+              - name: efs-shared-ray
+                mountPath: /home/shared
+                subPath: shared
             image: {{ .Values.rayCluster.spec.headGroupSpec.template.spec.containers.rayHead.image }}
             resources:
               limits:
@@ -95,12 +106,23 @@ spec:
             - key: nvidia.com/gpu
               operator: Exists
               effect: NoSchedule
+          initContainers: # 添加 initContainers
+            - name: install-python-packages
+              image: rayproject/ray-ml:2.6.0
+              command: [ "/bin/sh", "-c" ]
+              args: [ "pip install qstrader && echo 'Packages installed.'" ]
+              volumeMounts:
+                - name: efs-shared-ray
+                  mountPath: /home/shared  # 安装可以与共享卷交互
           containers:
             - name: ray-worker
               volumeMounts:
                 - name: efs-persist-shared
                   mountPath: /home/ray/ianleely
                   subPath: ianleely
+                - name: efs-shared-ray
+                  mountPath: /home/shared
+                  subPath: shared
               image: {{ .Values.rayCluster.spec.workerGroupSpecs.template.spec.containers.rayWorker.image }}
               lifecycle:
                 preStop:
