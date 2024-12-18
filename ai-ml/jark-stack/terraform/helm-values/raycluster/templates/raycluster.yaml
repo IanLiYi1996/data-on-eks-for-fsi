@@ -43,9 +43,9 @@ spec:
             effect: NoSchedule
         initContainers: # 添加 initContainers
           - name: install-python-packages
-            image: rayproject/ray-ml:2.6.0
+            image: rayproject/ray-ml:2.35.0.deprecated-py311-gpu
             command: [ "/bin/sh", "-c" ]
-            args: [ "pip install qstrader && echo 'Packages installed.'" ]
+            args: [ "pip install qstrader numpy==1.26.4 && echo 'Packages installed.'" ]
             volumeMounts:
               - name: efs-shared-ray
                 mountPath: /home/shared  # 安装可以与共享卷交互
@@ -75,6 +75,11 @@ spec:
                 name: dashboard
               - containerPort: 10001
                 name: client
+            env:
+              - name: RAY_GRAFANA_HOST
+                value: http://kube-prometheus-stack-grafana.kube-prometheus-stack.svc:80
+              - name: RAY_PROMETHEUS_HOST
+                value: http://kube-prometheus-stack-prometheus.kube-prometheus-stack.svc:9090
   workerGroupSpecs:
     - replicas: {{ .Values.rayCluster.spec.workerGroupSpecs.replicas }}
       minReplicas: {{ .Values.rayCluster.spec.workerGroupSpecs.minReplicas }}
@@ -108,9 +113,9 @@ spec:
               effect: NoSchedule
           initContainers: # 添加 initContainers
             - name: install-python-packages
-              image: rayproject/ray-ml:2.6.0
+              image: rayproject/ray-ml:2.35.0.deprecated-py311-gpu
               command: [ "/bin/sh", "-c" ]
-              args: [ "pip install qstrader && echo 'Packages installed.'" ]
+              args: [ "pip install qstrader numpy==1.26.4 && echo 'Packages installed.'" ]
               volumeMounts:
                 - name: efs-shared-ray
                   mountPath: /home/shared  # 安装可以与共享卷交互
