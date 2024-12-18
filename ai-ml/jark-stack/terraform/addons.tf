@@ -339,10 +339,10 @@ module "data_addons" {
           - key: nvidia.com/gpu
             value: "Exists"
             effect: "NoSchedule"
-          - key: hub.jupyter.org/dedicated
-            operator: "Equal"
-            value: "user"
-            effect: "NoSchedule"
+#           - key: hub.jupyter.org/dedicated
+#             operator: "Equal"
+#             value: "user"
+#             effect: "NoSchedule"
         requirements:
           - key: "karpenter.k8s.aws/instance-family"
             operator: In
@@ -360,7 +360,7 @@ module "data_addons" {
           cpu: 1000
         disruption:
           consolidationPolicy: WhenEmpty
-          consolidateAfter: 300s
+          consolidateAfter: 1800s
           expireAfter: 720h
         weight: 100
       EOT
@@ -417,7 +417,7 @@ module "data_addons" {
           cpu: 1000
         disruption:
           consolidationPolicy: WhenEmpty
-          consolidateAfter: 300s
+          consolidateAfter: 1800s
           expireAfter: 720h
         weight: 100
       EOT

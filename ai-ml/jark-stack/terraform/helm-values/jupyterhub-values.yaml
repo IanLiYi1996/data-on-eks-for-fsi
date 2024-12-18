@@ -14,6 +14,7 @@ hub:
     JupyterHub:
       authenticator_class: dummy
       http_timeout: 1200  # 与 singleuser.startTimeout 一致
+#      enable_user_namespaces: true
     KubeSpawner:
       k8s_api_request_timeout: 240
   extraConfig:
@@ -22,9 +23,9 @@ hub:
       c.KubeSpawner.start_timeout = 1200
       c.Spawner.http_timeout = 1200  
       c.Spawner.args = ['--allow-root']
-#      c.KubeSpawner.enable_user_namespaces = true
+#      c.KubeSpawner.enable_user_namespaces = True
 #      c.KubeSpawner.user_namespace_template = 'jupyter-{username}'
-    
+
 proxy:
   service:
     annotations:
@@ -70,17 +71,17 @@ singleuser:
           - key: "nvidia.com/gpu"
             operator: "Exists"
             effect: "NoSchedule"
-          - key: "hub.jupyter.org/dedicated" # According to optimization docs https://z2jh.jupyter.org/en/latest/administrator/optimization.html
-            operator: "Equal"
-            value: "user"
-            effect: "NoSchedule"
+#          - key: "hub.jupyter.org/dedicated" # According to optimization docs https://z2jh.jupyter.org/en/latest/administrator/optimization.html
+#            operator: "Equal"
+#            value: "user"
+#            effect: "NoSchedule"
         extra_resource_limits:
           nvidia.com/gpu: "1"
         cpu_guarantee: 4
         mem_guarantee: 16G
         cpu_limit: 7
         mem_limit: 30G
-        cmd: "start-singleuser.sh"  
+        cmd: "start-singleuser.sh"
 #  extraEnv:
 #    HUGGING_FACE_HUB_TOKEN:
 #      valueFrom:
@@ -109,17 +110,19 @@ singleuser:
         mountPath: /home/jovyan/dogbooth
       - name: jupyterhub-shared
         mountPath: /home/shared
+        subPath: shared
         readOnly: false
 #  serviceAccountName: ${jupyter_single_user_sa_name}
   allowPrivilegeEscalation: true
   extraPodConfig: # This is needed for Jovyan user running in every single pod, access the Service Account
     securityContext:
-      fsGroup: 100
+      runAsUser: 0
+      fsGroup: 0
   extraEnv: # Sudo needed to configure the proper permissions to start the notebook instance
     GRANT_SUDO: "yes"
     NOTEBOOK_ARGS: "--allow-root"
-    CHOWN_HOME: "no"
-    CHOWN_HOME_OPTS: "-R"
+    CHOWN_HOME: "yes"
+#    CHOWN_HOME_OPTS: "-R"
     CHOWN_EXTRA: "/home/shared"
   uid: 0
   fsGid: 0
