@@ -1,0 +1,6 @@
+click>=8.0
+matplotlib>=3.8
+pandas>=2.2
+seaborn>=0.13
+qstrader
+numpy==1.26.4
