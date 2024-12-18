@@ -100,17 +100,18 @@ singleuser:
 #      - name: notebook
 #        configMap:
 #          name: notebook
-#      - name: jupyterhub-shared
-#        persistentVolumeClaim:
-#          claimName: efs-persist-shared
+      - name: jupyterhub-shared
+        persistentVolumeClaim:
+          claimName: efs-persist-shared
     extraVolumeMounts:
       - name: shm-volume
         mountPath: /dev/shm
 #      - name: notebook
 #        mountPath: /home/jovyan/dogbooth
-#      - name: jupyterhub-shared
-#        mountPath: /home/shared
-#        readOnly: false
+      - name: jupyterhub-shared
+        mountPath: /home/shared
+        subPath: shared
+        readOnly: false
 #  serviceAccountName: ${jupyter_single_user_sa_name}
   allowPrivilegeEscalation: true
   extraPodConfig:
