@@ -113,7 +113,7 @@ singleuser:
         mountPath: /home/shared
         subPath: shared
         readOnly: false
-  serviceAccountName: ${jupyter_single_user_sa_name}
+#  serviceAccountName: ${jupyter_single_user_sa_name}
   allowPrivilegeEscalation: true
   extraPodConfig:
     securityContext:
