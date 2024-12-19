@@ -454,7 +454,21 @@ resource "kubernetes_config_map_v1" "notebook" {
   }
 
   data = {
-    "dogbooth.ipynb" = file("${path.module}/src/notebook/dogbooth.ipynb")
+    "01_Data-Handling.ipynb" = file("${path.module}/src/notebook/01_Data-Handling.ipynb")
+    "02_Stock-Screener.ipynb" = file("${path.module}/src/notebook/02_Stock-Screener.ipynb")
+    "03_Trading-Strategies-Paradigms.ipynb" = file("${path.module}/src/notebook/03_Trading-Strategies-Paradigms.ipynb")
+    "04_Regression-Recap-and-Asset-Pricing-Models.ipynb" = file("${path.module}/src/notebook/04_Regression-Recap-and-Asset-Pricing-Models.ipynb")
+    "05_Time-Series-Forecasting.ipynb" = file("${path.module}/src/notebook/05_Time-Series-Forecasting.ipynb")
+    "07_Strategy-Testing.ipynb" = file("${path.module}/src/notebook/07_Strategy-Testing.ipynb")
+    "08_Connect-to-a-trading-API.ipynb" = file("${path.module}/src/notebook/08_Connect-to-a-trading-API.ipynb")
+    "Introduction-to-Algorithmic-Trading.ipynb" = file("${path.module}/src/notebook/Introduction-to-Algorithmic-Trading.ipynb")
+    "Introduction-to-Python.ipynb" = file("${path.module}/src/notebook/Introduction-to-Python.ipynb")
+    "Machine-Learning-for-Algo-Trading.ipynb" = file("${path.module}/src/notebook/Machine-Learning-for-Algo-Trading.ipynb")
+    "backtesting-parallel.py" = file("${path.module}/src/scripts/backtesting-parallel.py")
+    "install-ray-on-jupyterhub-by-conda.sh" = file("${path.module}/src/scripts/install-ray-on-jupyterhub-by-conda.sh")
+    "ray-job-backtesting.ipynb" = file("${path.module}/src/notebook/ray-job-backtesting.ipynb")
+    "requirements.txt" = file("${path.module}/src/scripts/requirements.txt")
+    "verify-ray-enviorment.ipynb" = file("${path.module}/src/notebook/verify-ray-enviorment.ipynb")
   }
 }
 
