@@ -454,16 +454,16 @@ resource "kubernetes_config_map_v1" "notebook" {
   }
 
   data = {
-    "01_Data-Handling.ipynb" = file("${path.module}/src/notebook/01_Data-Handling.ipynb")
-    "02_Stock-Screener.ipynb" = file("${path.module}/src/notebook/02_Stock-Screener.ipynb")
-    "03_Trading-Strategies-Paradigms.ipynb" = file("${path.module}/src/notebook/03_Trading-Strategies-Paradigms.ipynb")
-    "04_Regression-Recap-and-Asset-Pricing-Models.ipynb" = file("${path.module}/src/notebook/04_Regression-Recap-and-Asset-Pricing-Models.ipynb")
-    "05_Time-Series-Forecasting.ipynb" = file("${path.module}/src/notebook/05_Time-Series-Forecasting.ipynb")
-    "07_Strategy-Testing.ipynb" = file("${path.module}/src/notebook/07_Strategy-Testing.ipynb")
-    "08_Connect-to-a-trading-API.ipynb" = file("${path.module}/src/notebook/08_Connect-to-a-trading-API.ipynb")
-    "Introduction-to-Algorithmic-Trading.ipynb" = file("${path.module}/src/notebook/Introduction-to-Algorithmic-Trading.ipynb")
-    "Introduction-to-Python.ipynb" = file("${path.module}/src/notebook/Introduction-to-Python.ipynb")
-    "Machine-Learning-for-Algo-Trading.ipynb" = file("${path.module}/src/notebook/Machine-Learning-for-Algo-Trading.ipynb")
+    # "01_Data-Handling.ipynb" = file("${path.module}/src/notebook/01_Data-Handling.ipynb")
+    # "02_Stock-Screener.ipynb" = file("${path.module}/src/notebook/02_Stock-Screener.ipynb")
+    # "03_Trading-Strategies-Paradigms.ipynb" = file("${path.module}/src/notebook/03_Trading-Strategies-Paradigms.ipynb")
+    # "04_Regression-Recap-and-Asset-Pricing-Models.ipynb" = file("${path.module}/src/notebook/04_Regression-Recap-and-Asset-Pricing-Models.ipynb")
+    # "05_Time-Series-Forecasting.ipynb" = file("${path.module}/src/notebook/05_Time-Series-Forecasting.ipynb")
+    # "07_Strategy-Testing.ipynb" = file("${path.module}/src/notebook/07_Strategy-Testing.ipynb")
+    # "08_Connect-to-a-trading-API.ipynb" = file("${path.module}/src/notebook/08_Connect-to-a-trading-API.ipynb")
+    # "Introduction-to-Algorithmic-Trading.ipynb" = file("${path.module}/src/notebook/Introduction-to-Algorithmic-Trading.ipynb")
+    # "Introduction-to-Python.ipynb" = file("${path.module}/src/notebook/Introduction-to-Python.ipynb")
+    # "Machine-Learning-for-Algo-Trading.ipynb" = file("${path.module}/src/notebook/Machine-Learning-for-Algo-Trading.ipynb")
     "backtesting-parallel.py" = file("${path.module}/src/scripts/backtesting-parallel.py")
     "install-ray-on-jupyterhub-by-conda.sh" = file("${path.module}/src/scripts/install-ray-on-jupyterhub-by-conda.sh")
     "ray-job-backtesting.ipynb" = file("${path.module}/src/notebook/ray-job-backtesting.ipynb")
@@ -513,12 +513,6 @@ data "aws_iam_policy_document" "karpenter_controller_policy" {
 #-----------------------------------------------------------------------------------------
 # JupyterHub Sinlgle User IRSA, maybe that block could be incorporated in add-on registry
 #-----------------------------------------------------------------------------------------
-resource "kubernetes_namespace" "jupyterhub" {
-  metadata {
-    name = "jupyterhub"
-  }
-}
-
 module "jupyterhub_single_user_irsa" {
   source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
 
@@ -531,7 +525,7 @@ module "jupyterhub_single_user_irsa" {
   oidc_providers = {
     main = {
       provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["${kubernetes_namespace.jupyterhub.metadata[0].name}:jupyterhub-single-user"]
+      namespace_service_accounts = ["${kubernetes_namespace_v1.jupyterhub.metadata[0].name}:jupyterhub-single-user"]
     }
   }
 }
@@ -539,7 +533,7 @@ module "jupyterhub_single_user_irsa" {
 resource "kubernetes_service_account_v1" "jupyterhub_single_user_sa" {
   metadata {
     name        = "${module.eks.cluster_name}-jupyterhub-single-user"
-    namespace   = kubernetes_namespace.jupyterhub.metadata[0].name
+    namespace   = kubernetes_namespace_v1.jupyterhub.metadata[0].name
     annotations = { "eks.amazonaws.com/role-arn" : module.jupyterhub_single_user_irsa.iam_role_arn }
   }
 
@@ -549,10 +543,10 @@ resource "kubernetes_service_account_v1" "jupyterhub_single_user_sa" {
 resource "kubernetes_secret_v1" "jupyterhub_single_user" {
   metadata {
     name      = "${module.eks.cluster_name}-jupyterhub-single-user-secret"
-    namespace = kubernetes_namespace.jupyterhub.metadata[0].name
+    namespace = kubernetes_namespace_v1.jupyterhub.metadata[0].name
     annotations = {
       "kubernetes.io/service-account.name"      = kubernetes_service_account_v1.jupyterhub_single_user_sa.metadata[0].name
-      "kubernetes.io/service-account.namespace" = kubernetes_namespace.jupyterhub.metadata[0].name
+      "kubernetes.io/service-account.namespace" = kubernetes_namespace_v1.jupyterhub.metadata[0].name
     }
   }
 
