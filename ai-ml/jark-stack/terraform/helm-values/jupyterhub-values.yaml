@@ -98,17 +98,17 @@ singleuser:
       - name: shm-volume
         emptyDir:
           medium: Memory
-#      - name: notebook
-#        configMap:
-#          name: notebook
+      - name: notebook
+        configMap:
+          name: notebook
       - name: jupyterhub-shared
         persistentVolumeClaim:
           claimName: efs-persist-shared
     extraVolumeMounts:
       - name: shm-volume
         mountPath: /dev/shm
-#      - name: notebook
-#        mountPath: /home/jovyan/dogbooth
+      - name: notebook
+        mountPath: /home/notebooks
       - name: jupyterhub-shared
         mountPath: /home/shared
         subPath: shared
