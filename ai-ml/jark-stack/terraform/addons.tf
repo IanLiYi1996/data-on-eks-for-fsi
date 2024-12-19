@@ -489,7 +489,7 @@ resource "kubernetes_config_map_v1" "notebook" {
     # "Machine-Learning-for-Algo-Trading.ipynb" = file("${path.module}/src/notebook/Machine-Learning-for-Algo-Trading.ipynb")
     "backtesting-parallel.py" = file("${path.module}/src/scripts/backtesting-parallel.py")
     "install-ray-on-jupyterhub-by-conda.sh" = file("${path.module}/src/scripts/install-ray-on-jupyterhub-by-conda.sh")
-    "ray-job-backtesting.ipynb" = file("${path.module}/src/notebook/ray-job-backtesting.ipynb")
+    "ray-job-backtesting-qstrader.ipynb" = file("${path.module}/src/notebook/ray-job-backtesting-trader.ipynb")
     "requirements.txt" = file("${path.module}/src/scripts/requirements.txt")
     "verify-ray-enviorment.ipynb" = file("${path.module}/src/notebook/verify-ray-enviorment.ipynb")
   }
