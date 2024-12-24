@@ -142,6 +142,21 @@ module "eks_blueprints_addons" {
   }
 
   #---------------------------------------
+  # Enable FSx for Lustre CSI Driver
+  #---------------------------------------
+  enable_aws_fsx_csi_driver = var.enable_fsx_for_lustre
+  aws_fsx_csi_driver = {
+    # INFO: fsx node daemonset won't be placed on Karpenter nodes with taints without the following toleration
+    values = [
+      <<-EOT
+        node:
+          tolerations:
+            - operator: Exists
+      EOT
+    ]
+  }
+
+  #---------------------------------------
   # Argo Workflows & Argo Events
   #---------------------------------------
   enable_argo_workflows = true
@@ -489,7 +504,8 @@ resource "kubernetes_config_map_v1" "notebook" {
     # "Machine-Learning-for-Algo-Trading.ipynb" = file("${path.module}/src/notebook/Machine-Learning-for-Algo-Trading.ipynb")
     "backtesting-parallel.py" = file("${path.module}/src/scripts/backtesting-parallel.py")
     "install-ray-on-jupyterhub-by-conda.sh" = file("${path.module}/src/scripts/install-ray-on-jupyterhub-by-conda.sh")
-    "ray-job-backtesting-qstrader.ipynb" = file("${path.module}/src/notebook/ray-job-backtesting-trader.ipynb")
+    "ray-job-backtesting-qstrader.ipynb" = file("${path.module}/src/notebook/ray-job-backtesting-qstrader.ipynb")
+    "ray-job-backtesting-backtrader.ipynb" = file("${path.module}/src/notebook/ray-job-backtesting-backtrader.ipynb")
     "requirements.txt" = file("${path.module}/src/scripts/requirements.txt")
     "verify-ray-enviorment.ipynb" = file("${path.module}/src/notebook/verify-ray-enviorment.ipynb")
   }
