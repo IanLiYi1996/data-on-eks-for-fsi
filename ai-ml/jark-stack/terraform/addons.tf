@@ -382,7 +382,6 @@ module "data_addons" {
         labels:
           - type: karpenter
           - NodePool: inferentia
-          - hub.jupyter.org/node-purpose: user
         taints:
           - key: aws.amazon.com/neuroncore
             value: "true"
@@ -426,7 +425,6 @@ module "data_addons" {
         labels:
           - type: karpenter
           - NodePool: trainium
-          - hub.jupyter.org/node-purpose: user
         taints:
           - key: aws.amazon.com/neuroncore
             value: "true"
