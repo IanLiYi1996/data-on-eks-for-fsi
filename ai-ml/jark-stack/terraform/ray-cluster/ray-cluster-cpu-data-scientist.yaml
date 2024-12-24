@@ -17,7 +17,7 @@ spec:
   storageClassName: efs-fc
   csi:
     driver: efs.csi.aws.com
-    volumeHandle: fs-xxxxxxxxxx # 替换为实际的 EFS 文件系统 ID
+    volumeHandle: fs-002da5cf92091b392 # 替换为实际的 EFS 文件系统 ID
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -67,8 +67,8 @@ spec:
                 mountPath: /home/shared
                 subPath: shared
               - name: efs-shared-ray-cpu-data-scientist
-                mountPath: /home/data-scientist
-                subPath: home/data-scientist
+                mountPath: /home/datascientist
+                subPath: home/datascientist
             ports:
               - containerPort: 6379
                 name: gcs-server
@@ -100,8 +100,8 @@ spec:
                   mountPath: /home/shared
                   subPath: shared
                 - name: efs-shared-ray-cpu-data-scientist
-                  mountPath: /home/data-scientist
-                  subPath: home/data-scientist
+                  mountPath: /home/datascientist
+                  subPath: home/datascientist
               resources:
                 limits:
                   cpu: 3

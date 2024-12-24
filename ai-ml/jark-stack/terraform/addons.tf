@@ -364,6 +364,358 @@ module "data_addons" {
   enable_karpenter_resources = true
   karpenter_resources_helm_config = {
 
+    inf2-resources-karpenter = {
+      values = [
+        <<-EOT
+      name: inferentia
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          id: ${module.vpc.private_subnets[2]}
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
+
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodePool: inferentia
+          - hub.jupyter.org/node-purpose: user
+        taints:
+          - key: aws.amazon.com/neuroncore
+            value: "true"
+            effect: "NoSchedule"
+          - key: aws.amazon.com/neuron
+            value: "true"
+            effect: "NoSchedule"
+        requirements:
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["inf2"]
+          - key: "karpenter.k8s.aws/instance-size"
+            operator: In
+            values: ["8xlarge", "24xlarge"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmpty
+          consolidateAfter: 300s
+          expireAfter: 720h
+        weight: 100
+      EOT
+      ]
+    }
+
+    trn1-resources-karpenter = {
+      values = [
+        <<-EOT
+      name: trainium
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          id: ${module.vpc.private_subnets[2]}
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
+
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodePool: trainium
+          - hub.jupyter.org/node-purpose: user
+        taints:
+          - key: aws.amazon.com/neuroncore
+            value: "true"
+            effect: "NoSchedule"
+          - key: aws.amazon.com/neuron
+            value: "true"
+            effect: "NoSchedule"
+        requirements:
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["trn1"]
+          - key: "karpenter.k8s.aws/instance-size"
+            operator: In
+            values: ["32xlarge"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmpty
+          consolidateAfter: 300s
+          expireAfter: 720h
+        weight: 100
+      EOT
+      ]
+    }
+
+    g6-gpu-karpenter = {
+      values = [
+        <<-EOT
+      name: g6-gpu-karpenter
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        amiFamily: AL2
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          id: ${module.vpc.private_subnets[2]}
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
+        blockDeviceMappings:
+          # Root device
+          - deviceName: /dev/xvda
+            ebs:
+              volumeSize: 50Gi
+              volumeType: gp3
+              encrypted: true
+          # Data device: Container resources such as images and logs
+          - deviceName: /dev/xvdb
+            ebs:
+              volumeSize: 300Gi
+              volumeType: gp3
+              encrypted: true
+              ${var.bottlerocket_data_disk_snpashot_id != null ? "snapshotID: ${var.bottlerocket_data_disk_snpashot_id}" : ""}
+
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodeGroupType: g5-gpu-karpenter
+          - hub.jupyter.org/node-purpose: user
+        taints:
+          - key: nvidia.com/gpu
+            value: "Exists"
+            effect: "NoSchedule"
+#           - key: hub.jupyter.org/dedicated
+#             operator: "Equal"
+#             value: "user"
+#             effect: "NoSchedule"
+        requirements:
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["g6"]
+          - key: "karpenter.k8s.aws/instance-size"
+            operator: In
+            values: [ "2xlarge", "4xlarge", "8xlarge", "12xlarge" ]
+          - key: "kubernetes.io/arch"
+            operator: In
+            values: ["amd64"]
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["on-demand"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmpty
+          consolidateAfter: 300s
+          expireAfter: 720h
+        weight: 100
+      EOT
+      ]
+    }
+
+    g6e-gpu-karpenter-ts = {
+      values = [
+        <<-EOT
+      name: g6e-gpu-karpenter-ts
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        amiFamily: AL2
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          id: ${module.vpc.private_subnets[2]}
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
+        blockDeviceMappings:
+          # Root device
+          - deviceName: /dev/xvda
+            ebs:
+              volumeSize: 50Gi
+              volumeType: gp3
+              encrypted: true
+          # Data device: Container resources such as images and logs
+          - deviceName: /dev/xvdb
+            ebs:
+              volumeSize: 300Gi
+              volumeType: gp3
+              encrypted: true
+              ${var.bottlerocket_data_disk_snpashot_id != null ? "snapshotID: ${var.bottlerocket_data_disk_snpashot_id}" : ""}
+
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodeGroupType: g5-gpu-karpenter
+          - hub.jupyter.org/node-purpose: user
+        taints:
+          - key: nvidia.com/gpu
+            value: "Exists"
+            effect: "NoSchedule"
+#           - key: hub.jupyter.org/dedicated
+#             operator: "Equal"
+#             value: "user"
+#             effect: "NoSchedule"
+        requirements:
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["g6e"]
+          - key: "karpenter.k8s.aws/instance-size"
+            operator: In
+            values: [ "2xlarge", "4xlarge", "8xlarge", "12xlarge" ]
+          - key: "kubernetes.io/arch"
+            operator: In
+            values: ["amd64"]
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["on-demand"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmpty
+          consolidateAfter: 300s
+          expireAfter: 720h
+        weight: 100
+      EOT
+      ]
+    }
+
+    g6e-gpu-karpenter = {
+      values = [
+        <<-EOT
+      name: g6e-gpu-karpenter
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        amiFamily: AL2
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          id: ${module.vpc.private_subnets[2]}
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
+        blockDeviceMappings:
+          # Root device
+          - deviceName: /dev/xvda
+            ebs:
+              volumeSize: 50Gi
+              volumeType: gp3
+              encrypted: true
+          # Data device: Container resources such as images and logs
+          - deviceName: /dev/xvdb
+            ebs:
+              volumeSize: 300Gi
+              volumeType: gp3
+              encrypted: true
+              ${var.bottlerocket_data_disk_snpashot_id != null ? "snapshotID: ${var.bottlerocket_data_disk_snpashot_id}" : ""}
+
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodeGroupType: g5-gpu-karpenter
+          - hub.jupyter.org/node-purpose: user
+        taints:
+          - key: nvidia.com/gpu
+            value: "Exists"
+            effect: "NoSchedule"
+#           - key: hub.jupyter.org/dedicated
+#             operator: "Equal"
+#             value: "user"
+#             effect: "NoSchedule"
+        requirements:
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["g6e"]
+          - key: "karpenter.k8s.aws/instance-size"
+            operator: In
+            values: [ "2xlarge", "4xlarge", "8xlarge", "12xlarge" ]
+          - key: "kubernetes.io/arch"
+            operator: In
+            values: ["amd64"]
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["on-demand"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmpty
+          consolidateAfter: 300s
+          expireAfter: 720h
+        weight: 100
+      EOT
+      ]
+    }
+
+    g4-gpu-karpenter = {
+      values = [
+        <<-EOT
+      name: g4-gpu-karpenter
+      clusterName: ${module.eks.cluster_name}
+      ec2NodeClass:
+        amiFamily: AL2
+        karpenterRole: ${split("/", module.eks_blueprints_addons.karpenter.node_iam_role_arn)[1]}
+        subnetSelectorTerms:
+          id: ${module.vpc.private_subnets[2]}
+        securityGroupSelectorTerms:
+          tags:
+            Name: ${module.eks.cluster_name}-node
+        instanceStorePolicy: RAID0
+        blockDeviceMappings:
+          # Root device
+          - deviceName: /dev/xvda
+            ebs:
+              volumeSize: 50Gi
+              volumeType: gp3
+              encrypted: true
+          # Data device: Container resources such as images and logs
+          - deviceName: /dev/xvdb
+            ebs:
+              volumeSize: 300Gi
+              volumeType: gp3
+              encrypted: true
+              ${var.bottlerocket_data_disk_snpashot_id != null ? "snapshotID: ${var.bottlerocket_data_disk_snpashot_id}" : ""}
+
+      nodePool:
+        labels:
+          - type: karpenter
+          - NodeGroupType: g5-gpu-karpenter
+          - hub.jupyter.org/node-purpose: user
+        taints:
+          - key: nvidia.com/gpu
+            value: "Exists"
+            effect: "NoSchedule"
+#           - key: hub.jupyter.org/dedicated
+#             operator: "Equal"
+#             value: "user"
+#             effect: "NoSchedule"
+        requirements:
+          - key: "karpenter.k8s.aws/instance-family"
+            operator: In
+            values: ["g4dn"]
+          - key: "karpenter.k8s.aws/instance-size"
+            operator: In
+            values: [ "2xlarge", "4xlarge", "8xlarge", "12xlarge" ]
+          - key: "kubernetes.io/arch"
+            operator: In
+            values: ["amd64"]
+          - key: "karpenter.sh/capacity-type"
+            operator: In
+            values: ["on-demand"]
+        limits:
+          cpu: 1000
+        disruption:
+          consolidationPolicy: WhenEmpty
+          consolidateAfter: 300s
+          expireAfter: 720h
+        weight: 100
+      EOT
+      ]
+    }
+
     g5-gpu-karpenter = {
       values = [
         <<-EOT
@@ -409,26 +761,28 @@ module "data_addons" {
         requirements:
           - key: "karpenter.k8s.aws/instance-family"
             operator: In
-            values: ["g4dn"]
+            values: ["g5"]
           - key: "karpenter.k8s.aws/instance-size"
             operator: In
-            values: [ "2xlarge", "4xlarge", "8xlarge" ]
+            values: [ "2xlarge", "4xlarge", "8xlarge", "12xlarge" ]
           - key: "kubernetes.io/arch"
             operator: In
             values: ["amd64"]
           - key: "karpenter.sh/capacity-type"
             operator: In
-            values: ["spot", "on-demand"]
+            values: ["on-demand"]
         limits:
           cpu: 1000
         disruption:
           consolidationPolicy: WhenEmpty
-          consolidateAfter: 1800s
+          consolidateAfter: 300s
           expireAfter: 720h
         weight: 100
       EOT
       ]
     }
+
+
     x86-cpu-karpenter = {
       values = [
         <<-EOT
@@ -475,12 +829,12 @@ module "data_addons" {
             values: ["amd64"]
           - key: "karpenter.sh/capacity-type"
             operator: In
-            values: ["spot", "on-demand"]
+            values: ["on-demand"]
         limits:
           cpu: 1000
         disruption:
           consolidationPolicy: WhenEmpty
-          consolidateAfter: 1800s
+          consolidateAfter: 300s
           expireAfter: 720h
         weight: 100
       EOT
@@ -538,6 +892,21 @@ resource "aws_security_group" "efs" {
 
   tags = local.tags
 }
+
+# 安装 Fluid
+# resource "helm_release" "fluid" {
+#   name       = "fluid"
+#   repository = "https://fluid-cloudnative.github.io/charts"
+#   chart      = "fluid"
+#   version    = "1.0.0" # 替换为 Fluid 的最新版本
+#
+#   namespace = "fluid-system"
+#   create_namespace = true
+#
+#   values = [
+#     file("${path.module}/helm-values/fluid-values.yaml") # 可选：如果你有自定义的 values 文件
+#   ]
+# }
 
 #---------------------------------------
 # EFS Configuration

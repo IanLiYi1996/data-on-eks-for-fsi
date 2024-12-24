@@ -1,0 +1,29 @@
+# fluid-values.yaml
+
+# Global settings
+global:
+  logLevel: "INFO"  # 日志级别，可选 DEBUG, INFO, WARN, ERROR
+  runtimeNamespace: "fluid-system"  # 设置 Runtime 所属的 namespace
+
+# Control plane configuration
+controller:
+  replicas: 2  # 根据集群规模设置控制器副本数
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "1"
+      memory: "2Gi"
+
+# Monitoring and metrics
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+  prometheus:
+    enabled: false  # 如果已有 Prometheus，可禁用此项
+
+# Node affinity and tolerations
+nodeAffinity:
+  enabled: false  # 如果需要特定的节点亲和性，将此值设置为 true，并配置 rules

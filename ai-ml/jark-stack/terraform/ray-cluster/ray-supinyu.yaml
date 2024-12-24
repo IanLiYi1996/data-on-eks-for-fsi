@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: fsi-ray-gpu-data-scientist
+  name: fsi-ray-supinyu
 
 ---
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: efs-shared-ray-gpu-data-scientist
+  name: efs-shared-ray-supinyu
 spec:
   capacity:
     storage: 100Gi
@@ -22,8 +22,8 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: efs-shared-ray-gpu-data-scientist
-  namespace: fsi-ray-gpu-data-scientist
+  name: efs-shared-ray-supinyu
+  namespace: fsi-ray-supinyu
 spec:
   accessModes:
     - ReadWriteMany
@@ -36,8 +36,8 @@ spec:
 apiVersion: ray.io/v1alpha1
 kind: RayCluster
 metadata:
-  name: fsi-ray-gpu-data-scientist
-  namespace: fsi-ray-gpu-data-scientist
+  name: fsi-ray-supinyu
+  namespace: fsi-ray-supinyu
 spec:
   rayVersion: '2.35.0'
   headGroupSpec:
@@ -46,15 +46,15 @@ spec:
     template:
       spec:
         volumes:
-          - name: efs-shared-ray-gpu-data-scientist
+          - name: efs-shared-ray-supinyu
             persistentVolumeClaim:
-              claimName: efs-shared-ray-gpu-data-scientist
+              claimName: efs-shared-ray-supinyu
         nodeSelector:
           type: karpenter
-          NodeGroupType: g5-gpu-karpenter
+          NodeGroupType: x86-cpu-karpenter
         containers:
           - name: ray-head
-            image: rayproject/ray-ml:2.35.0.deprecated-py311-gpu
+            image: rayproject/ray-ml:2.35.0.deprecated-py311-cpu
             resources:
               limits:
                 cpu: 3
@@ -63,12 +63,12 @@ spec:
                 cpu: 2
                 memory: 10Gi
             volumeMounts:
-              - name: efs-shared-ray-gpu-data-scientist
+              - name: efs-shared-ray-supinyu
                 mountPath: /home/shared
                 subPath: shared
-              - name: efs-shared-ray-gpu-data-scientist
-                mountPath: /home/data-scientist
-                subPath: home/data-scientist
+              - name: efs-shared-ray-supinyu
+                mountPath: /home/pinyusu
+                subPath: home/pinyusu
             ports:
               - containerPort: 6379
                 name: gcs-server
@@ -85,23 +85,23 @@ spec:
       template:
         spec:
           volumes:
-            - name: efs-shared-ray-gpu-data-scientist
+            - name: efs-shared-ray-supinyu
               persistentVolumeClaim:
-                claimName: efs-shared-ray-gpu-data-scientist
+                claimName: efs-shared-ray-supinyu
           containers:
             - name: ray-worker
-              image: rayproject/ray-ml:2.35.0.deprecated-py311-gpu
+              image: rayproject/ray-ml:2.35.0.deprecated-py311-cpu
               lifecycle:
                 preStop:
                   exec:
                     command: ["/bin/sh","-c","ray stop"]
               volumeMounts:
-                - name: efs-shared-ray-gpu-data-scientist
+                - name: efs-shared-ray-supinyu
                   mountPath: /home/shared
                   subPath: shared
-                - name: efs-shared-ray-gpu-data-scientist
-                  mountPath: /home/data-scientist
-                  subPath: home/data-scientist
+                - name: efs-shared-ray-supinyu
+                  mountPath: /home/pinyusu
+                  subPath: home/pinyusu
               resources:
                 limits:
                   cpu: 3
@@ -114,8 +114,8 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: fsi-ray-gpu-data-scientist-dashboard
-  namespace: fsi-ray-gpu-data-scientist
+  name: fsi-ray-supinyu-dashboard
+  namespace: fsi-ray-supinyu
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: "/$1"
 spec:
@@ -123,7 +123,7 @@ spec:
   rules:
   - http:
       paths:
-        - path: /fsi-ray-gpu-data-scientist-dashboard/dashboard/(.*)
+        - path: /fsi-ray-cpu/dashboard/(.*)
           pathType: ImplementationSpecific
           backend:
             service:

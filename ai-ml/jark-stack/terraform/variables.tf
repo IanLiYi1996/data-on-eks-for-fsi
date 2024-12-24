@@ -1,6 +1,6 @@
 variable "name" {
   description = "Name of the VPC and EKS Cluster"
-  default     = "jark-stack-1217-demo"
+  default     = "jark-stack-1224"
   type        = string
 }
 
