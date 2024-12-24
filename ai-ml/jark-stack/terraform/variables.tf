@@ -58,3 +58,9 @@ variable "bottlerocket_data_disk_snpashot_id" {
   default     = ""
 
 }
+
+variable "enable_fsx_for_lustre" {
+  description = "Flag to enable resources for FSx for Lustre"
+  type        = bool
+  default     = true
+}
