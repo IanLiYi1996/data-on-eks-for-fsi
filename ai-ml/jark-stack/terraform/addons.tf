@@ -438,7 +438,7 @@ module "data_addons" {
             values: ["trn1"]
           - key: "karpenter.k8s.aws/instance-size"
             operator: In
-            values: ["32xlarge"]
+            values: ["2xlarge", "32xlarge"]
         limits:
           cpu: 1000
         disruption:
