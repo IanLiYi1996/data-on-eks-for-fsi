@@ -290,6 +290,11 @@ module "data_addons" {
   oidc_provider_arn = module.eks.oidc_provider_arn
 
   #---------------------------------------------------------------
+  # Enable Neuron Device Plugin
+  #---------------------------------------------------------------
+  enable_aws_neuron_device_plugin = true
+
+  #---------------------------------------------------------------
   # JupyterHub Add-on
   #---------------------------------------------------------------
   enable_jupyterhub = true
@@ -382,6 +387,7 @@ module "data_addons" {
         labels:
           - type: karpenter
           - NodePool: inferentia
+          - hub.jupyter.org/node-purpose: user
         taints:
           - key: aws.amazon.com/neuroncore
             value: "true"
@@ -425,6 +431,7 @@ module "data_addons" {
         labels:
           - type: karpenter
           - NodePool: trainium
+          - hub.jupyter.org/node-purpose: user
         taints:
           - key: aws.amazon.com/neuroncore
             value: "true"
@@ -482,16 +489,12 @@ module "data_addons" {
       nodePool:
         labels:
           - type: karpenter
-          - NodeGroupType: g5-gpu-karpenter
+          - NodeGroupType: g6-gpu-karpenter
           - hub.jupyter.org/node-purpose: user
         taints:
           - key: nvidia.com/gpu
             value: "Exists"
             effect: "NoSchedule"
-#           - key: hub.jupyter.org/dedicated
-#             operator: "Equal"
-#             value: "user"
-#             effect: "NoSchedule"
         requirements:
           - key: "karpenter.k8s.aws/instance-family"
             operator: In
@@ -548,16 +551,12 @@ module "data_addons" {
       nodePool:
         labels:
           - type: karpenter
-          - NodeGroupType: g5-gpu-karpenter
+          - NodeGroupType: g6e-gpu-karpenter-ts
           - hub.jupyter.org/node-purpose: user
         taints:
           - key: nvidia.com/gpu
             value: "Exists"
             effect: "NoSchedule"
-#           - key: hub.jupyter.org/dedicated
-#             operator: "Equal"
-#             value: "user"
-#             effect: "NoSchedule"
         requirements:
           - key: "karpenter.k8s.aws/instance-family"
             operator: In
@@ -614,16 +613,12 @@ module "data_addons" {
       nodePool:
         labels:
           - type: karpenter
-          - NodeGroupType: g5-gpu-karpenter
+          - NodeGroupType: g6e-gpu-karpenter
           - hub.jupyter.org/node-purpose: user
         taints:
           - key: nvidia.com/gpu
             value: "Exists"
             effect: "NoSchedule"
-#           - key: hub.jupyter.org/dedicated
-#             operator: "Equal"
-#             value: "user"
-#             effect: "NoSchedule"
         requirements:
           - key: "karpenter.k8s.aws/instance-family"
             operator: In
@@ -680,16 +675,12 @@ module "data_addons" {
       nodePool:
         labels:
           - type: karpenter
-          - NodeGroupType: g5-gpu-karpenter
+          - NodeGroupType: g4-gpu-karpenter
           - hub.jupyter.org/node-purpose: user
         taints:
           - key: nvidia.com/gpu
             value: "Exists"
             effect: "NoSchedule"
-#           - key: hub.jupyter.org/dedicated
-#             operator: "Equal"
-#             value: "user"
-#             effect: "NoSchedule"
         requirements:
           - key: "karpenter.k8s.aws/instance-family"
             operator: In
@@ -752,10 +743,6 @@ module "data_addons" {
           - key: nvidia.com/gpu
             value: "Exists"
             effect: "NoSchedule"
-#           - key: hub.jupyter.org/dedicated
-#             operator: "Equal"
-#             value: "user"
-#             effect: "NoSchedule"
         requirements:
           - key: "karpenter.k8s.aws/instance-family"
             operator: In
