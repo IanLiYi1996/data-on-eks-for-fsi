@@ -104,7 +104,6 @@ singleuser:
       kubespawner_override:
         node_selector:
           NodePool: inferentia
-          hub.jupyter.org/node-purpose: user
         tolerations:
           - key: aws.amazon.com/neuroncore
             operator: Exists
