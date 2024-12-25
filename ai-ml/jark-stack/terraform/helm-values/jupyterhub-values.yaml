@@ -1,5 +1,5 @@
 hub:
-  command: [ "sh", "-c", "pip install boto3 && pip install jupyterhub==4.1.0 && jupyterhub --config /usr/local/etc/jupyterhub/jupyterhub_config.py" ]
+  command: [ "sh", "-c", "pip install boto3 && pip install kubernetes && pip install jupyterhub==4.1.0 && jupyterhub --config /usr/local/etc/jupyterhub/jupyterhub_config.py" ]
   config:
     Authenticator:
       admin_users:
@@ -20,6 +20,27 @@ hub:
       k8s_api_request_timeout: 240
   extraConfig:
     jupyterhub_config.py: |-
+      from kubernetes import client, config
+      def create_service_account(username):
+          config.load_incluster_config()
+          v1 = client.CoreV1Api()
+          metadata = client.V1ObjectMeta(name=f"jupyter-{username}")
+          service_account = client.V1ServiceAccount(metadata=metadata)
+          try:
+              v1.create_namespaced_service_account("jupyterhub", service_account)
+          except client.exceptions.ApiException as e:
+              if e.status == 409:  # Already exists
+                  pass
+              else:
+                  raise
+
+      def modify_pod_hook(spawner, pod):
+          username = spawner.user.name
+          create_service_account(username)
+          pod.spec.service_account_name = f"jupyter-{username}"
+          return pod
+
+      c.KubeSpawner.modify_pod_hook = modify_pod_hook
       c.Spawner.start_timeout = 1200
       c.KubeSpawner.start_timeout = 1200
       c.Spawner.http_timeout = 1200  
@@ -234,6 +255,7 @@ singleuser:
         subPath: shared
         readOnly: false
 #  serviceAccountName: ${jupyter_single_user_sa_name}
+#  serviceAccountName: 'jupyter-{username}'
   allowPrivilegeEscalation: true
   extraPodConfig: # This is needed for Jovyan user running in every single pod, access the Service Account
     securityContext:
