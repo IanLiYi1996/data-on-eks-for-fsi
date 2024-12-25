@@ -948,6 +948,38 @@ resource "kubernetes_secret_v1" "jupyterhub_single_user" {
   type = "kubernetes.io/service-account-token"
 }
 
+resource "kubernetes_role" "jupyterhub_service_account_creator" {
+  metadata {
+    name      = "jupyterhub-service-account-creator"
+    namespace = "jupyterhub"
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["serviceaccounts"]
+    verbs      = ["create", "get", "list", "watch"]
+  }
+}
+
+resource "kubernetes_role_binding" "jupyterhub_service_account_creator_binding" {
+  metadata {
+    name      = "jupyterhub-service-account-creator-binding"
+    namespace = "jupyterhub"
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = "hub"
+    namespace = "jupyterhub"
+  }
+
+  role_ref {
+    kind     = "Role"
+    name     = kubernetes_role.jupyterhub_service_account_creator.metadata[0].name
+    api_group = "rbac.authorization.k8s.io"
+  }
+}
+
 #---------------------------------------------------------------
 # EFS Filesystem for private volumes per user
 # This will be replaced with Dynamic EFS provision using EFS CSI Driver

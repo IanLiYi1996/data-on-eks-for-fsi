@@ -1,0 +1,127 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: fsi-ray
+  name: access-raycluster
+rules:
+  - apiGroups: ["ray.io"]
+    resources: ["rayclusters"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods", "services", "configmaps"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  namespace: fsi-ray
+  name: bind-access-raycluster
+subjects:
+  - kind: ServiceAccount
+    name: jupyter-liyi
+    namespace: jupyterhub
+roleRef:
+  kind: Role
+  name: access-raycluster
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  namespace: fsi-ray
+  name: default-deny-all
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  namespace: jupyterhub
+  name: default-deny-all
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  namespace: jupyterhub
+  name: allow-fsi-ray-only
+spec:
+  podSelector:
+    matchLabels:
+      app: jupyter-liyi
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: fsi-ray
+      ports:
+        - protocol: TCP
+          port: 80
+        - protocol: TCP
+          port: 10001  # 示例服务端口，可根据实际情况调整
+        - protocol: TCP
+          port: 443  # 示例服务端口，可根据实际情况调整
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: fsi-ray
+  name: allow-jupyter-liyi
+rules:
+  - apiGroups: [""]  # core API group
+    resources: ["pods", "services", "configmaps"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["ray.io"]
+    resources: ["rayclusters"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  namespace: fsi-ray
+  name: bind-jupyter-liyi
+subjects:
+  - kind: ServiceAccount
+    name: jupyter-liyi
+    namespace: jupyterhub
+roleRef:
+  kind: Role
+  name: allow-jupyter-liyi
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-only-jupyter-liyi
+  namespace: fsi-ray
+spec:
+  podSelector:
+    matchLabels:
+      app: jupyter-liyi
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: jupyterhub
+          podSelector:
+            matchLabels:
+              app: jupyter-liyi  # Pod 的 Label 匹配条件
+      ports:
+        - protocol: TCP
+          port: 10001  # 示例服务端口，可根据实际情况调整
+        - protocol: TCP
+          port: 443  # 示例服务端口，可根据实际情况调整
+        - protocol: TCP
+          port: 80  # 示例服务端口，可根据实际情况调整
+  policyTypes:
+    - Ingress

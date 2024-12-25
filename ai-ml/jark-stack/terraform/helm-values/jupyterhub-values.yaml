@@ -1,5 +1,5 @@
 hub:
-  command: [ "sh", "-c", "pip install boto3 && pip install jupyterhub==4.1.0 && jupyterhub --config /usr/local/etc/jupyterhub/jupyterhub_config.py" ]
+  command: [ "sh", "-c", "pip install boto3 kubernetes && pip install jupyterhub==4.1.0 && jupyterhub --config /usr/local/etc/jupyterhub/jupyterhub_config.py" ]
   config:
     Authenticator:
       admin_users:
@@ -19,6 +19,27 @@ hub:
       k8s_api_request_timeout: 240
   extraConfig:
     jupyterhub_config.py: |-
+      from kubernetes import client, config
+      def create_service_account(username):
+          config.load_incluster_config()
+          v1 = client.CoreV1Api()
+          metadata = client.V1ObjectMeta(name=f"jupyter-{username}")
+          service_account = client.V1ServiceAccount(metadata=metadata)
+          try:
+              v1.create_namespaced_service_account("jupyterhub", service_account)
+          except client.exceptions.ApiException as e:
+              if e.status == 409:  # Already exists
+                  pass
+              else:
+                  raise
+
+      def modify_pod_hook(spawner, pod):
+          username = spawner.user.name
+          create_service_account(username)
+          pod.spec.service_account_name = f"jupyter-{username}"
+          return pod
+
+      c.KubeSpawner.modify_pod_hook = modify_pod_hook
       c.Spawner.start_timeout = 1200
       c.KubeSpawner.start_timeout = 1200
       c.Spawner.http_timeout = 1200  
@@ -122,10 +143,15 @@ singleuser:
       kubespawner_override:
         image: cschranz/gpu-jupyter:v1.6_cuda-11.8_ubuntu-22.04_python-only
         node_selector:
-          NodePool: g4-gpu-karpenter
+          NodePool: g4dn-gpu-karpenter
+          hub.jupyter.org/node-purpose: user
         tolerations:
           - key: "nvidia.com/gpu"
             operator: "Exists"
+            effect: "NoSchedule"
+          - key: "hub.jupyter.org/dedicated" # According to optimization docs https://z2jh.jupyter.org/en/latest/administrator/optimization.html
+            operator: "Equal"
+            value: "user"
             effect: "NoSchedule"
         extra_resource_limits:
           nvidia.com/gpu: "1"
@@ -133,7 +159,7 @@ singleuser:
         mem_guarantee: 16G
         cpu_limit: 7
         mem_limit: 30G
-        cmd: "start-singleuser.sh"
+        cmd: null
     - display_name: Data Science (GPU - G5.2xlarge)
       description: "GPU with G5 instances | Karpenter Autoscaler"
       kubespawner_override:

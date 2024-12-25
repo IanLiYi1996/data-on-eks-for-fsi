@@ -10,15 +10,8 @@ metadata:
   name: dogbooth
   namespace: dogbooth
 spec:
-  serviceUnhealthySecondThreshold: 600
-  deploymentUnhealthySecondThreshold: 600
-  serveConfig:
-    importPath: dogbooth:entrypoint
-    runtimeEnv: |
-      env_vars: {"MODEL_ID": "askulkarni2/dogbooth"}
-      #env_vars: {"MODEL_ID": "stabilityai/stable-diffusion-2-1"}
   rayClusterConfig:
-    rayVersion: '2.6.0'
+    rayVersion: '2.35.0'
     headGroupSpec:
       rayStartParams:
         dashboard-host: '0.0.0.0'
@@ -26,16 +19,16 @@ spec:
         spec:
           containers:
             - name: ray-head
-              image: public.ecr.aws/h3o5n2r0/dogbooth:0.0.1-gpu
+              image: rayproject/ray-ml:2.35.0.deprecated-py311-gpu
               resources:
                 limits:
-                  cpu: 2
-                  memory: 16Gi
-                  nvidia.com/gpu: 1
+                  cpu: 1
+                  memory: 4Gi
+                  nvidia.com/gpu: 0
                 requests:
-                  cpu: 2
-                  memory: 16Gi
-                  nvidia.com/gpu: 1
+                  cpu: 1
+                  memory: 4Gi
+                  nvidia.com/gpu: 0
               ports:
                 - containerPort: 6379
                   name: gcs-server
@@ -46,8 +39,8 @@ spec:
                 - containerPort: 8000
                   name: serve
     workerGroupSpecs:
-      - replicas: 1
-        minReplicas: 1
+      - replicas: 0
+        minReplicas: 0
         maxReplicas: 5
         rayStartParams: {}
         groupName: small-group
