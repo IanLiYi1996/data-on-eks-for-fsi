@@ -100,6 +100,10 @@ module "eks_blueprints_addons" {
       preserve = true
     }
   }
+  #---------------------------------------------------------------
+  # Enable Neuron Device Plugin
+  #---------------------------------------------------------------
+  enable_aws_neuron_device_plugin = true
 
   #---------------------------------------
   # AWS Load Balancer Controller Add-on

@@ -130,7 +130,7 @@ spec:
           # These workers will run on Trn1 instances provisioned by the cluster autoscaler.
           # This is necessary as Karpenter doesn't currently support EFA (required for Neuron distributed training).
           nodeSelector:
-            instance-type: trn1-32xl
+            instance-type: trn1-2xl
             provisioner: cluster-autoscaler
 
           # Tolerations for Trn1 and Dedicated Nodes
