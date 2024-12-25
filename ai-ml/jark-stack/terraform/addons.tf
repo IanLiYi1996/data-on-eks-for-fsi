@@ -100,10 +100,6 @@ module "eks_blueprints_addons" {
       preserve = true
     }
   }
-  #---------------------------------------------------------------
-  # Enable Neuron Device Plugin
-  #---------------------------------------------------------------
-  enable_aws_neuron_device_plugin = true
 
   #---------------------------------------
   # AWS Load Balancer Controller Add-on
@@ -246,6 +242,11 @@ module "data_addons" {
     create_namespace = false
     values           = [file("${path.module}/helm-values/jupyterhub-values.yaml")]
   }
+
+  #---------------------------------------------------------------
+  # Enable Neuron Device Plugin
+  #---------------------------------------------------------------
+  enable_aws_neuron_device_plugin = true
 
   # #---------------------------------------------------------------
   # # JupyterHub Add-on
