@@ -1,34 +1,106 @@
-# 1. 默认拒绝所有流量的 NetworkPolicy（两个命名空间都需要）
+## RBAC 授权 jupyter-liyi ServiceAccount 访问 fsi-ray 命名空间的资源
+#apiVersion: rbac.authorization.k8s.io/v1
+#kind: Role
+#metadata:
+#  namespace: fsi-ray
+#  name: access-raycluster
+#rules:
+#  - apiGroups: ["ray.io"]
+#    resources: ["rayclusters"]
+#    verbs: ["get", "list", "watch"]
+#  - apiGroups: [""]
+#    resources: ["pods", "services", "configmaps"]
+#    verbs: ["get", "list", "watch"]
+#---
+#apiVersion: rbac.authorization.k8s.io/v1
+#kind: RoleBinding
+#metadata:
+#  namespace: fsi-ray
+#  name: bind-access-raycluster
+#subjects:
+#  - kind: ServiceAccount
+#    name: jupyter-liyi
+#    namespace: jupyterhub
+#roleRef:
+#  kind: Role
+#  name: access-raycluster
+#  apiGroup: rbac.authorization.k8s.io
+#---
+## 默认拒绝所有流量的 NetworkPolicy（两个命名空间都需要）
+#apiVersion: networking.k8s.io/v1
+#kind: NetworkPolicy
+#metadata:
+#  name: default-deny-all
+#  namespace: fsi-ray
+#spec:
+#  podSelector: {}
+#  policyTypes:
+#    - Ingress
+#    - Egress
+#---
+#apiVersion: networking.k8s.io/v1
+#kind: NetworkPolicy
+#metadata:
+#  name: default-deny-all
+#  namespace: jupyterhub
+#spec:
+#  podSelector: {}
+#  policyTypes:
+#    - Ingress
+#    - Egress
+#---
+## 允许 jupyterhub开放80端口用于创建本地->jupyterhub的连接
+#apiVersion: networking.k8s.io/v1
+#kind: NetworkPolicy
+#metadata:
+#  name: allow-jupyterhub-ingress-port-80
+#  namespace: jupyterhub
+#spec:
+#  podSelector: {}  # Apply to all pods in jupyterhub namespace
+#  ingress:
+#    - from:
+#        - namespaceSelector:
+#            matchLabels:
+#              name: fsi-ray  # Allow traffic from the fsi-ray namespace (adjust as needed)
+#      ports:
+#        - protocol: TCP
+#          port: 80
+#        - protocol: TCP
+#          port: 443
+#        - protocol: TCP
+#          port: 8080
+#  policyTypes:
+#    - Ingress
+#---
+## 仅允许jupyter-liyi发出10010到fsi-ray
+#apiVersion: networking.k8s.io/v1
+#kind: NetworkPolicy
+#metadata:
+#  name: allow-jupyter-liyi-egress
+#  namespace: jupyterhub # 作用于 jupyterhub 命名空间
+#spec:
+#  podSelector:
+#    matchLabels:
+#      app: jupyter-liyi # 只允许 app: jupyter-liyi 的 Pod 发起流量
+#  egress:
+#    - to:
+#        - namespaceSelector:
+#            matchLabels:
+#              name: fsi-ray
+#      ports:
+#        - protocol: TCP
+#          port: 10001
+#  policyTypes:
+#    - Egress
+#---
+# 允许 jupyter-liyi Pod 访问 fsi-ray 命名空间的 NetworkPolicy
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: default-deny-all
+  name: allow-fsi-ray-connectivity-from-liyi
   namespace: fsi-ray
 spec:
   podSelector: {}
-  policyTypes:
-    - Ingress
-    - Egress
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: default-deny-all
-  namespace: jupyterhub
-spec:
-  podSelector: {}
-  policyTypes:
-    - Ingress
-    - Egress
----
-# 2. 允许 jupyter-liyi Pod 访问 fsi-ray 命名空间的 NetworkPolicy
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-jupyter-liyi-ingress
-  namespace: fsi-ray # 作用于 fsi-ray 命名空间
-spec:
-  podSelector: {} # 允许所有 Pod 接收来自 jupyter-liyi 的流量 (根据端口限制)
   ingress:
     - from:
         - namespaceSelector:
@@ -39,62 +111,35 @@ spec:
               app: jupyter-liyi
       ports:
         - protocol: TCP
-          port: 80
+          port: 10001  # 如果 `ray://` 服务运行在该端口
         - protocol: TCP
-          port: 443
-        - protocol: TCP
-          port: 10001
-  policyTypes:
-    - Ingress
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-jupyter-liyi-egress
-  namespace: jupyterhub # 作用于 jupyterhub 命名空间
-spec:
-  podSelector:
-    matchLabels:
-      app: jupyter-liyi # 只允许 app: jupyter-liyi 的 Pod 发起流量
+          port: 30965  # 如果 `ray://` 服务运行在该端口
   egress:
     - to:
         - namespaceSelector:
             matchLabels:
-              name: fsi-ray
-      ports:
-        - protocol: TCP
-          port: 80
-        - protocol: TCP
-          port: 443
-        - protocol: TCP
-          port: 10001
+              name: jupyterhub
+          podSelector:
+            matchLabels:
+              app: jupyter-liyi
   policyTypes:
+    - Ingress
     - Egress
 ---
-# 3. RBAC 授权 jupyter-liyi ServiceAccount 访问 fsi-ray 命名空间的资源
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
 metadata:
+  name: allow-fsi-ray-full-connectivity
   namespace: fsi-ray
-  name: access-raycluster
-rules:
-  - apiGroups: ["ray.io"]
-    resources: ["rayclusters"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["pods", "services", "configmaps"]
-    verbs: ["get", "list", "watch"]
+spec:
+  podSelector: {}  # Apply to all pods in the fsi-ray namespace
+  ingress:
+    - from:
+        - podSelector: {}  # Allow traffic from any pod within the fsi-ray namespace
+  egress:
+    - to:
+        - podSelector: {}  # Allow traffic to any pod within the fsi-ray namespace
+  policyTypes:
+    - Ingress
+    - Egress
 ---
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  namespace: fsi-ray
-  name: bind-access-raycluster
-subjects:
-  - kind: ServiceAccount
-    name: jupyter-liyi
-    namespace: jupyterhub
-roleRef:
-  kind: Role
-  name: access-raycluster
-  apiGroup: rbac.authorization.k8s.io
