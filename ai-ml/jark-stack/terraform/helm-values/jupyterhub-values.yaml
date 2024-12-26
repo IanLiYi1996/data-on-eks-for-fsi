@@ -250,7 +250,7 @@ singleuser:
       - name: shm-volume
         mountPath: /dev/shm
       - name: notebook
-        mountPath: /home/jovyan/dogbooth
+        mountPath: /home/notebook
       - name: jupyterhub-shared
         mountPath: /home/shared
         subPath: shared
