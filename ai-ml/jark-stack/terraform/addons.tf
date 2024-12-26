@@ -201,6 +201,12 @@ module "eks_blueprints_addons" {
     # VPC CNI uses worker node IAM role policies
     vpc-cni = {
       preserve = true
+      # Explicitly configure configuration values
+      configuration_values = <<EOF
+      {
+        "enableNetworkPolicy": "true"
+      }
+      EOF
     }
   }
 
@@ -988,7 +994,32 @@ resource "kubernetes_namespace_v1" "jupyterhub" {
   }
 }
 
+resource "kubernetes_persistent_volume" "efs-ray-cluster" {
+  metadata {
+    name = "efs-ray-cluster"
+  }
 
+  spec {
+    capacity = {
+      storage = "100Gi"
+    }
+
+    access_modes = ["ReadWriteMany"]
+
+    persistent_volume_reclaim_policy = "Retain"
+
+    storage_class_name = "efs-fc"
+
+    persistent_volume_source {
+      csi {
+        driver        = "efs.csi.aws.com"
+        volume_handle = aws_efs_file_system.efs.id
+      }
+    }
+  }
+
+  depends_on = [aws_efs_file_system.efs]
+}
 
 resource "kubernetes_secret_v1" "huggingface_token" {
   metadata {

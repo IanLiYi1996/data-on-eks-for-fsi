@@ -8,10 +8,11 @@ hub:
         - quantresearcher
         - algotrader
         - datascientist
-        - pinyusu
+        - dataengineer
+        - algoengineer
     # testing only - do not do this for production
     DummyAuthenticator:
-      password: never-do-this
+      password: AWS@Jupyter@2025
     JupyterHub:
       authenticator_class: dummy
       http_timeout: 1200  # 与 singleuser.startTimeout 一致

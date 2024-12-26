@@ -1,0 +1,159 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: fsi-ray-cpu-algotrader
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: efs-shared-ray-cpu-algotrader
+  namespace: fsi-ray-cpu-algotrader
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: efs-fc
+  resources:
+    requests:
+      storage: 100Gi
+
+---
+apiVersion: ray.io/v1alpha1
+kind: RayCluster
+metadata:
+  name: fsi-ray-cpu-algotrader
+  namespace: fsi-ray-cpu-algotrader
+spec:
+  rayVersion: '2.35.0'
+  enableInTreeAutoscaling: true
+  autoscalerOptions:
+    upscalingMode: Default
+    idleTimeoutSeconds: 60
+    imagePullPolicy: IfNotPresent
+    securityContext: { }
+    env: [ ]
+    envFrom: [ ]
+    resources:
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+      requests:
+        cpu: "500m"
+        memory: "512Mi"
+  headGroupSpec:
+    rayStartParams:
+      dashboard-host: '0.0.0.0'
+    template:
+      spec:
+        volumes:
+          - name: efs-shared-ray-cpu-algotrader
+            persistentVolumeClaim:
+              claimName: efs-shared-ray-cpu-algotrader
+        nodeSelector:
+          type: karpenter
+          NodeGroupType: x86-cpu-karpenter
+        containers:
+          - name: ray-head
+            image: rayproject/ray-ml:2.35.0.deprecated-py311-cpu
+            resources:
+              limits:
+                cpu: 3
+                memory: 14Gi
+              requests:
+                cpu: 2
+                memory: 10Gi
+            volumeMounts:
+              - name: efs-shared-ray-cpu-algotrader
+                mountPath: /home/shared
+                subPath: shared
+              - name: efs-shared-ray-cpu-algotrader
+                mountPath: /home/algotrader
+                subPath: home/algotrader
+            ports:
+              - containerPort: 6379
+                name: gcs-server
+              - containerPort: 8265
+                name: dashboard
+              - containerPort: 10001
+                name: client
+  workerGroupSpecs:
+    - replicas: 1
+      minReplicas: 1
+      maxReplicas: 5
+      rayStartParams: {}
+      groupName: cpu-group
+      template:
+        spec:
+          volumes:
+            - name: efs-shared-ray-cpu-algotrader
+              persistentVolumeClaim:
+                claimName: efs-shared-ray-cpu-algotrader
+          nodeSelector:
+            type: karpenter
+            NodeGroupType: x86-cpu-karpenter
+          containers:
+            - name: ray-worker
+              image: rayproject/ray-ml:2.35.0.deprecated-py311-cpu
+              lifecycle:
+                preStop:
+                  exec:
+                    command: ["/bin/sh","-c","ray stop"]
+              volumeMounts:
+                - name: efs-shared-ray-cpu-algotrader
+                  mountPath: /home/shared
+                  subPath: shared
+                - name: efs-shared-ray-cpu-algotrader
+                  mountPath: /home/algotrader
+                  subPath: home/algotrader
+              resources:
+                limits:
+                  cpu: 3
+                  memory: 14Gi
+                requests:
+                  cpu: 2
+                  memory: 10Gi
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: fsi-ray-cpu-dashboard-algotrader
+  namespace: fsi-ray-cpu-algotrader
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: "/$1"
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+        - path: /fsi-ray-cpu-algotrader-dashboard/dashboard/(.*)
+          pathType: ImplementationSpecific
+          backend:
+            service:
+              name: fsi-ray-cpu-algotrader-head-svc
+              port:
+                number: 8265
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-jupyter-access-fsi-ray-cpu-algotrader
+  namespace: fsi-ray-cpu-algotrader
+spec:
+  podSelector: {}
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name : jupyterhub
+          podSelector:
+            matchLabels:
+              hub.jupyter.org/username : algotrader
+      ports:
+        - protocol: TCP
+          port: 6379 # GCS server port
+        - protocol: TCP
+          port: 8265 # Dashboard port
+        - protocol: TCP
+          port: 10001 # Client port
+  policyTypes:
+    - Ingress
