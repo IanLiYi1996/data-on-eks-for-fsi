@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: fsi-ray-cpu-algotrader
+  name: fsi-ray-gpu-quantresearcher
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: efs-shared-ray-cpu-algotrader
-  namespace: fsi-ray-cpu-algotrader
+  name: efs-shared-ray-gpu-quantresearcher
+  namespace: fsi-ray-gpu-quantresearcher
 spec:
   accessModes:
     - ReadWriteMany
@@ -20,8 +20,8 @@ spec:
 apiVersion: ray.io/v1alpha1
 kind: RayCluster
 metadata:
-  name: fsi-ray-cpu-algotrader
-  namespace: fsi-ray-cpu-algotrader
+  name: fsi-ray-gpu-quantresearcher
+  namespace: fsi-ray-gpu-quantresearcher
 spec:
   rayVersion: '2.35.0'
   enableInTreeAutoscaling: true
@@ -34,10 +34,10 @@ spec:
     envFrom: [ ]
     resources:
       limits:
-        cpu: "500m"
+        gpu: "500m"
         memory: "512Mi"
       requests:
-        cpu: "500m"
+        gpu: "500m"
         memory: "512Mi"
   headGroupSpec:
     rayStartParams:
@@ -45,29 +45,31 @@ spec:
     template:
       spec:
         volumes:
-          - name: efs-shared-ray-cpu-algotrader
+          - name: efs-shared-ray-gpu-quantresearcher
             persistentVolumeClaim:
-              claimName: efs-shared-ray-cpu-algotrader
+              claimName: efs-shared-ray-gpu-quantresearcher
         nodeSelector:
           type: karpenter
-          NodeGroupType: x86-cpu-karpenter
+          NodeGroupType: g4-gpu-karpenter
         containers:
           - name: ray-head
-            image: rayproject/ray-ml:2.35.0.deprecated-py311-cpu
+            image: rayproject/ray-ml:2.35.0.deprecated-py311-gpu
             resources:
               limits:
-                cpu: 3
+                gpu: 3
                 memory: 14Gi
+                nvidia.com/gpu: 1
               requests:
-                cpu: 2
+                gpu: 2
                 memory: 10Gi
+                nvidia.com/gpu: 1
             volumeMounts:
-              - name: efs-shared-ray-cpu-algotrader
+              - name: efs-shared-ray-gpu-quantresearcher
                 mountPath: /home/shared
                 subPath: shared
-              - name: efs-shared-ray-cpu-algotrader
-                mountPath: /home/algotrader
-                subPath: home/algotrader
+              - name: efs-shared-ray-gpu-quantresearcher
+                mountPath: /home/quantresearcher
+                subPath: home/quantresearcher
             ports:
               - containerPort: 6379
                 name: gcs-server
@@ -80,44 +82,47 @@ spec:
       minReplicas: 1
       maxReplicas: 5
       rayStartParams: {}
-      groupName: cpu-group
+      groupName: gpu-group
       template:
         spec:
           volumes:
-            - name: efs-shared-ray-cpu-algotrader
+            - name: efs-shared-ray-gpu-quantresearcher
               persistentVolumeClaim:
-                claimName: efs-shared-ray-cpu-algotrader
+                claimName: efs-shared-ray-gpu-quantresearcher
           nodeSelector:
             type: karpenter
-            NodeGroupType: x86-cpu-karpenter
+            NodeGroupType: x86-gpu-karpenter
           containers:
             - name: ray-worker
-              image: rayproject/ray-ml:2.35.0.deprecated-py311-cpu
+              image: rayproject/ray-ml:2.35.0.deprecated-py311-gpu
               lifecycle:
                 preStop:
                   exec:
                     command: ["/bin/sh","-c","ray stop"]
               volumeMounts:
-                - name: efs-shared-ray-cpu-algotrader
+                - name: efs-shared-ray-gpu-quantresearcher
                   mountPath: /home/shared
                   subPath: shared
-                - name: efs-shared-ray-cpu-algotrader
-                  mountPath: /home/algotrader
-                  subPath: home/algotrader
+                - name: efs-shared-ray-gpu-quantresearcher
+                  mountPath: /home/quantresearcher
+                  subPath: home/quantresearcher
               resources:
                 limits:
-                  cpu: 3
+                  gpu: 3
                   memory: 14Gi
+                  nvidia.com/gpu: 1
                 requests:
-                  cpu: 2
+                  gpu: 2
                   memory: 10Gi
+                  nvidia.com/gpu: 1
+                  
 
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: fsi-ray-cpu-dashboard-algotrader
-  namespace: fsi-ray-cpu-algotrader
+  name: fsi-ray-gpu-dashboard-quantresearcher
+  namespace: fsi-ray-gpu-quantresearcher
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: "/$1"
 spec:
@@ -125,19 +130,19 @@ spec:
   rules:
   - http:
       paths:
-        - path: /fsi-ray-cpu-algotrader-dashboard/dashboard/(.*)
+        - path: /fsi-ray-gpu-quantresearcher-dashboard/dashboard/(.*)
           pathType: ImplementationSpecific
           backend:
             service:
-              name: fsi-ray-cpu-algotrader-head-svc
+              name: fsi-ray-gpu-quantresearcher-head-svc
               port:
                 number: 8265
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-jupyter-access-fsi-ray-cpu-algotrader
-  namespace: fsi-ray-cpu-algotrader
+  name: allow-jupyter-access-fsi-ray-gpu-quantresearcher
+  namespace: fsi-ray-gpu-quantresearcher
 spec:
   podSelector: {}
   ingress:
@@ -147,7 +152,7 @@ spec:
               kubernetes.io/metadata.name : jupyterhub
           podSelector:
             matchLabels:
-              hub.jupyter.org/username : algotrader
+              hub.jupyter.org/username : quantresearcher
       ports:
         - protocol: TCP
           port: 6379 # GCS server port

@@ -1039,7 +1039,10 @@ resource "kubernetes_config_map_v1" "notebook" {
   }
 
   data = {
-    "dogbooth.ipynb" = file("${path.module}/src/notebook/dogbooth.ipynb")
+    "backtesting-parallel.py" = file("${path.module}/src/scripts/backtesting-parallel.py")
+    "ray-job-backtesting-qstrader.ipynb" = file("${path.module}/src/notebook/ray-job-backtesting-qstrader.ipynb")
+    "ray-job-backtesting-backtrader.ipynb" = file("${path.module}/src/notebook/ray-job-backtesting-backtrader.ipynb")
+    "verify-ray-enviorment.ipynb" = file("${path.module}/src/notebook/verify-ray-enviorment.ipynb")
   }
 }
 
