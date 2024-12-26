@@ -98,6 +98,12 @@ module "eks_blueprints_addons" {
     # VPC CNI uses worker node IAM role policies
     vpc-cni = {
       preserve = true
+      # Explicitly configure configuration values
+      configuration_values = <<EOF
+      {
+        "enableNetworkPolicy": "true"
+      }
+      EOF
     }
   }
 

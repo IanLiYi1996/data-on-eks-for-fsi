@@ -26,6 +26,33 @@ roleRef:
   name: access-raycluster
   apiGroup: rbac.authorization.k8s.io
 ---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: fsi-ray
+  name: allow-jupyter-liyi
+rules:
+  - apiGroups: [""]  # core API group
+    resources: ["pods", "services", "configmaps"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["ray.io"]
+    resources: ["rayclusters"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  namespace: fsi-ray
+  name: bind-jupyter-liyi
+subjects:
+  - kind: ServiceAccount
+    name: jupyter-liyi
+    namespace: jupyterhub
+roleRef:
+  kind: Role
+  name: allow-jupyter-liyi
+  apiGroup: rbac.authorization.k8s.io
+---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -72,33 +99,6 @@ spec:
         - protocol: TCP
           port: 443  # 示例服务端口，可根据实际情况调整
 ---
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  namespace: fsi-ray
-  name: allow-jupyter-liyi
-rules:
-  - apiGroups: [""]  # core API group
-    resources: ["pods", "services", "configmaps"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["ray.io"]
-    resources: ["rayclusters"]
-    verbs: ["get", "list", "watch"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  namespace: fsi-ray
-  name: bind-jupyter-liyi
-subjects:
-  - kind: ServiceAccount
-    name: jupyter-liyi
-    namespace: jupyterhub
-roleRef:
-  kind: Role
-  name: allow-jupyter-liyi
-  apiGroup: rbac.authorization.k8s.io
----
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -125,3 +125,59 @@ spec:
           port: 80  # 示例服务端口，可根据实际情况调整
   policyTypes:
     - Ingress
+#---
+#apiVersion: networking.k8s.io/v1
+#kind: NetworkPolicy
+#metadata:
+#  namespace: jupyterhub
+#  name: allow-fsi-ray-head-only
+#spec:
+#  podSelector:
+#    matchLabels:
+#      app: jupyter-liyi
+#  policyTypes:
+#    - Ingress
+#  ingress:
+#    - from:
+#        - namespaceSelector:
+#            matchLabels:
+#              name: fsi-ray
+#      ports:
+#        - protocol: TCP
+#          port: 10001
+#
+#---
+#apiVersion: networking.k8s.io/v1
+#kind: NetworkPolicy
+#metadata:
+#  namespace: fsi-ray
+#  name: allow-jupyter-liyi
+#spec:
+#  podSelector:
+#    matchLabels:
+#      app: ray-worker  # 仅允许 ray-worker Pod 访问
+#  ingress:
+#  - from:
+#    - namespaceSelector:
+#        matchLabels:
+#          name: jupyterhub
+#      podSelector:
+#        matchLabels:
+#          app: jupyter-liyi
+#  policyTypes:
+#    - Ingress
+#
+#---
+#apiVersion: rbac.authorization.k8s.io/v1
+#kind: RoleBinding
+#metadata:
+#  namespace: jupyterhub
+#  name: jupyter-liyi-ray-access
+#subjects:
+#  - kind: ServiceAccount
+#    name: jupyter-liyi  # 替换为实际的 ServiceAccount
+#    namespace: jupyterhub
+#roleRef:
+#  apiGroup: rbac.authorization.k8s.io
+#  kind: ClusterRole
+#  name: cluster-admin  # 授予集群管理员权限，可根据实际需求调整
