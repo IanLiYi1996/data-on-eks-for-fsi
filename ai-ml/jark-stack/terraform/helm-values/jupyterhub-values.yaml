@@ -246,6 +246,9 @@ singleuser:
       - name: jupyterhub-shared
         persistentVolumeClaim:
           claimName: efs-persist-shared
+      - name: fsx-volume
+        persistentVolumeClaim:
+          claimName: fsx-claim-jupyter
     extraVolumeMounts:
       - name: shm-volume
         mountPath: /dev/shm
@@ -255,6 +258,9 @@ singleuser:
         mountPath: /home/shared
         subPath: shared
         readOnly: false
+      - name: fsx-volume
+        mountPath: /home/fsx
+        subPath: "home/{username}"
 #  serviceAccountName: ${jupyter_single_user_sa_name}
 #  serviceAccountName: 'jupyter-{username}'
   allowPrivilegeEscalation: true

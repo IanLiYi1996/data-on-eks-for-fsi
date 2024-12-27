@@ -264,6 +264,21 @@ module "eks_blueprints_addons" {
   }
 
   #---------------------------------------
+  # Enable FSx for Lustre CSI Driver
+  #---------------------------------------
+  enable_aws_fsx_csi_driver = var.enable_fsx_for_lustre
+  aws_fsx_csi_driver = {
+    # INFO: fsx node daemonset won't be placed on Karpenter nodes with taints without the following toleration
+    values = [
+      <<-EOT
+        node:
+          tolerations:
+            - operator: Exists
+      EOT
+    ]
+  }
+
+  #---------------------------------------
   # Argo Workflows & Argo Events
   #---------------------------------------
   enable_argo_workflows = true

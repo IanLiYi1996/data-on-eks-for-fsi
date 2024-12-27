@@ -34,10 +34,10 @@ spec:
     envFrom: [ ]
     resources:
       limits:
-        gpu: "500m"
+        cpu: "500m"
         memory: "512Mi"
       requests:
-        gpu: "500m"
+        cpu: "500m"
         memory: "512Mi"
   headGroupSpec:
     rayStartParams:
@@ -56,11 +56,11 @@ spec:
             image: rayproject/ray-ml:2.35.0.deprecated-py311-gpu
             resources:
               limits:
-                gpu: 3
+                cpu: 3
                 memory: 14Gi
                 nvidia.com/gpu: 1
               requests:
-                gpu: 2
+                cpu: 2
                 memory: 10Gi
                 nvidia.com/gpu: 1
             volumeMounts:
@@ -91,7 +91,7 @@ spec:
                 claimName: efs-shared-ray-gpu-quantresearcher
           nodeSelector:
             type: karpenter
-            NodeGroupType: x86-gpu-karpenter
+            NodeGroupType: g4-gpu-karpenter
           containers:
             - name: ray-worker
               image: rayproject/ray-ml:2.35.0.deprecated-py311-gpu
@@ -108,11 +108,11 @@ spec:
                   subPath: home/quantresearcher
               resources:
                 limits:
-                  gpu: 3
+                  cpu: 3
                   memory: 14Gi
                   nvidia.com/gpu: 1
                 requests:
-                  gpu: 2
+                  cpu: 2
                   memory: 10Gi
                   nvidia.com/gpu: 1
                   
