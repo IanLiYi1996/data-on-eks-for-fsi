@@ -140,3 +140,30 @@ YAML
 
   depends_on = [resource.kubectl_manifest.fsx_storageclass]
 }
+
+resource "kubernetes_namespace_v1" "llm" {
+  metadata {
+    name = "llm"
+  }
+}
+
+resource "kubectl_manifest" "static_pv_llm" {
+  count = var.enable_fsx_for_lustre ? 1 : 0
+
+  yaml_body = <<YAML
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: fsx-claim-ray
+  namespace: llm
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: fsx
+  resources:
+    requests:
+      storage: 1200Gi
+YAML
+
+  depends_on = [resource.kubernetes_namespace_v1.llm]
+}

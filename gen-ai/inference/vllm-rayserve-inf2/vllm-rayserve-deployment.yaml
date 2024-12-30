@@ -322,8 +322,8 @@ spec:
             configMap:
               name: vllm-serve-script
           nodeSelector:
-            instanceType: inferentia-inf2
-            provisionerType: Karpenter
+            instance-type: inf2.24xlarge
+            provisioner: cluster-autoscaler
           tolerations:
           - key: "aws.amazon.com/neuron"
             operator: "Exists"

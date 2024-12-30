@@ -36,31 +36,31 @@ variable "secondary_cidr_blocks" {
 variable "enable_jupyterhub" {
   description = "Enable JupyterHub deployment"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "enable_mpi_operator" {
   description = "Flag to enable the MPI Operator deployment"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "enable_volcano" {
   description = "Flag to enable the Volcano batch scheduler"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "enable_torchx_etcd" {
   description = "Flag to enable etcd deployment for torchx"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "enable_fsx_for_lustre" {
   description = "Flag to enable resources for FSx for Lustre"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "trn1_32xl_min_size" {
@@ -90,7 +90,7 @@ variable "trn1n_32xl_desired_size" {
 variable "inf2_24xl_min_size" {
   description = "Worker node minimum size"
   type        = number
-  default     = 0
+  default     = 1
 }
 
 variable "inf2_24xl_desired_size" {

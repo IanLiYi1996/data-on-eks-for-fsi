@@ -342,7 +342,7 @@ module "data_addons" {
   enable_karpenter_resources = true
   karpenter_resources_helm_config = {
 
-       inf2-resources-karpenter = {
+    inf2-resources-karpenter = {
       values = [
         <<-EOT
       name: inferentia
