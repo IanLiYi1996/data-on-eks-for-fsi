@@ -322,8 +322,8 @@ spec:
             configMap:
               name: vllm-serve-script
           nodeSelector:
-            instance-type: inf2.24xlarge
-            provisioner: cluster-autoscaler
+            instanceType: inferentia-inf2
+            provisionerType: Karpenter
           tolerations:
           - key: "aws.amazon.com/neuron"
             operator: "Exists"
@@ -331,4 +331,10 @@ spec:
           - key: "hub.jupyter.org/dedicated"
             operator: "Equal"
             value: "user"
+            effect: "NoSchedule"
+          - key: "karpenter.sh/disrupted"
+            operator: "Exists"
+            effect: "NoSchedule"
+          - key: "node.kubernetes.io/unreachable"
+            operator: "Exists"
             effect: "NoSchedule"
