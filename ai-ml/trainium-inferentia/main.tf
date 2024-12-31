@@ -47,9 +47,9 @@ provider "kubectl" {
   }
 }
 
-data "aws_ecrpublic_authorization_token" "token" {
-  provider = aws.ecr
-}
+# data "aws_ecrpublic_authorization_token" "token" {
+#   provider = aws.ecr
+# }
 
 data "aws_caller_identity" "current" {}
 
