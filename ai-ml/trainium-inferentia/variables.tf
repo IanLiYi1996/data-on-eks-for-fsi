@@ -90,7 +90,7 @@ variable "trn1n_32xl_desired_size" {
 variable "inf2_24xl_min_size" {
   description = "Worker node minimum size"
   type        = number
-  default     = 1
+  default     = 0
 }
 
 variable "inf2_24xl_desired_size" {
